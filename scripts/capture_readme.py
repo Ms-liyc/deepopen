@@ -5,12 +5,15 @@ from __future__ import annotations
 import html
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "screenshots"
+_WORK = Path(tempfile.mkdtemp(prefix="deepopen-capture-"))
 EDGE_CANDIDATES = [
     Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")) / "Microsoft/Edge/Application/msedge.exe",
     Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Microsoft/Edge/Application/msedge.exe",
@@ -30,7 +33,7 @@ def _find_browser() -> Path:
 
 
 def _screenshot(browser: Path, page: Path, dest: Path, width: int, height: int) -> None:
-    profile = OUT / ".edge-profile"
+    profile = _WORK / "edge-profile"
     profile.mkdir(parents=True, exist_ok=True)
     cmd = [
         str(browser),
@@ -65,7 +68,7 @@ def _write_cli(text: str) -> Path:
         elif raw.startswith("扫描") or raw.startswith("已检查") or raw.startswith("问题"):
             css = "meta"
         lines.append(f'<div class="ln {css}">{escaped if escaped else "&nbsp;"}</div>')
-    page = OUT / "_cli.html"
+    page = _WORK / "_cli.html"
     page.write_text(
         f"""<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="utf-8"><style>
@@ -126,7 +129,7 @@ def _write_console(result: dict, version: str, rule_count: int) -> Path:
             + _esc(item["snippet"])
             + "</code></td></tr>"
         )
-    page = OUT / "_console.html"
+    page = _WORK / "_console.html"
     page.write_text(
         f"""<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="utf-8"><style>
@@ -206,7 +209,7 @@ def _write_guide(sections: list[dict], version: str, rule_count: int) -> Path:
         blocks.append(
             f'<div class="panel"><h3>{_esc(section["title"])}</h3><ul>{items}</ul></div>'
         )
-    page = OUT / "_guide.html"
+    page = _WORK / "_guide.html"
     page.write_text(
         f"""<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="utf-8"><style>
@@ -247,25 +250,29 @@ def main() -> int:
     from deepopen.version import __version__
 
     OUT.mkdir(parents=True, exist_ok=True)
-    result = scan_path(ROOT / "examples")
-    payload = json.loads(render_json(result))
-    rule_count = len(all_rule_records())
-    cli_text = render_text(result, color=False)
-    (OUT / "report.html").write_text(render_html(result), encoding="utf-8")
+    try:
+        result = scan_path(ROOT / "examples")
+        payload = json.loads(render_json(result))
+        rule_count = len(all_rule_records())
+        cli_text = render_text(result, color=False)
+        report_page = _WORK / "report.html"
+        report_page.write_text(render_html(result), encoding="utf-8")
 
-    browser = _find_browser()
-    cli_page = _write_cli(cli_text)
-    console_page = _write_console(payload, __version__, rule_count)
-    guide_page = _write_guide(CHECKLIST_SECTIONS, __version__, rule_count)
-    _screenshot(browser, cli_page, OUT / "cli.png", 1100, 720)
-    _screenshot(browser, console_page, OUT / "console.png", 1440, 860)
-    _screenshot(browser, OUT / "report.html", OUT / "report.png", 1400, 900)
-    _screenshot(browser, guide_page, OUT / "checklist.png", 1440, 860)
-    print("wrote", OUT)
-    for name in ("cli.png", "console.png", "report.png", "checklist.png"):
-        path = OUT / name
-        print(f"  {name}: {path.stat().st_size if path.is_file() else 'MISSING'} bytes")
-    return 0
+        browser = _find_browser()
+        cli_page = _write_cli(cli_text)
+        console_page = _write_console(payload, __version__, rule_count)
+        guide_page = _write_guide(CHECKLIST_SECTIONS, __version__, rule_count)
+        _screenshot(browser, cli_page, OUT / "cli.png", 1100, 720)
+        _screenshot(browser, console_page, OUT / "console.png", 1440, 860)
+        _screenshot(browser, report_page, OUT / "report.png", 1400, 900)
+        _screenshot(browser, guide_page, OUT / "checklist.png", 1440, 860)
+        print("wrote", OUT)
+        for name in ("cli.png", "console.png", "report.png", "checklist.png"):
+            path = OUT / name
+            print(f"  {name}: {path.stat().st_size if path.is_file() else 'MISSING'} bytes")
+        return 0
+    finally:
+        shutil.rmtree(_WORK, ignore_errors=True)
 
 
 if __name__ == "__main__":

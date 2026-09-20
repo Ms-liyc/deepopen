@@ -12,19 +12,19 @@
 
 **终端扫描** — `python -m deepopen scan examples`
 
-![终端扫描 examples](docs/screenshots/cli.png)
+<p><img src="./docs/screenshots/cli.png" alt="终端扫描 examples" width="920"></p>
 
 **本地控制台** — `python -m deepopen serve examples`，浏览器打开 http://127.0.0.1:8765/
 
-![本地 Web 控制台](docs/screenshots/console.png)
+<p><img src="./docs/screenshots/console.png" alt="本地 Web 控制台" width="920"></p>
 
 **HTML 报告** — `python -m deepopen scan examples -o reports/report.html`
 
-![HTML 检查报告](docs/screenshots/report.png)
+<p><img src="./docs/screenshots/report.png" alt="HTML 检查报告" width="920"></p>
 
 **加固清单** — 控制台「清单」页，或 `python -m deepopen checklist`
 
-![加固清单](docs/screenshots/checklist.png)
+<p><img src="./docs/screenshots/checklist.png" alt="加固清单" width="920"></p>
 
 截图可用 `python scripts/capture_readme.py` 重新生成（需本机安装 Edge 或 Chrome）。
 
