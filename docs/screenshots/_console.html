@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><style>
+:root { --bg:#08111d; --panel:#0f1a2a; --line:#24344c; --text:#e8eef7; --muted:#8ea0b8;
+  --mint:#3ee0b2; --gold:#f3c15a; --coral:#ff6b7a; --violet:#c084fc; --sky:#5ec8ff; }
+html,body { margin:0; height:100%; background:var(--bg); color:var(--text);
+  font-family:"Segoe UI","Microsoft YaHei",sans-serif; }
+.app { display:grid; grid-template-columns:280px 1fr; min-height:100%; }
+aside { border-right:1px solid var(--line); background:rgba(15,26,42,.92); padding:22px 18px; }
+.brand { display:flex; gap:12px; align-items:center; margin-bottom:18px; }
+.mark { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,var(--mint),#1a8f8a);
+  color:#062019; display:grid; place-items:center; font-weight:800; }
+h1 { font-size:16px; margin:0; } .sub { color:var(--muted); font-size:12px; margin-top:2px; }
+label { font-size:12px; color:var(--muted); display:block; margin:12px 0 6px; }
+.box { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:13px; }
+button { border:0; border-radius:10px; padding:10px 12px; font-weight:700; background:var(--mint); color:#062019; width:100%; margin-top:12px; }
+.ghost { background:transparent; color:var(--text); border:1px solid var(--line); margin-top:8px; }
+.hint { color:var(--muted); font-size:12px; margin-top:14px; line-height:1.5; }
+main { padding:22px 26px; }
+.stats { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:16px; }
+.stat { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px; }
+.stat b { display:block; font-size:26px; } .stat span { color:var(--muted); font-size:12px; text-transform:uppercase; }
+.stat.high b { color:var(--coral); } .stat.medium b { color:var(--gold); }
+.stat.low b { color:var(--sky); } .stat.info b { color:var(--muted); } .stat.critical b { color:var(--violet); }
+.layout { display:grid; grid-template-columns:1.15fr .85fr; gap:16px; }
+.list,.detail { background:var(--panel); border:1px solid var(--line); border-radius:16px; overflow:hidden; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th { text-align:left; color:var(--muted); font-size:11px; padding:10px 12px; }
+td { padding:10px 12px; border-top:1px solid var(--line); vertical-align:top; }
+tr.selected td { background:#173047; }
+.sev { font-family:Consolas,monospace; font-size:11px; font-weight:700; text-transform:uppercase; }
+.sev.high { color:var(--coral); } .sev.medium { color:var(--gold); } .sev.low { color:var(--sky); }
+code { font-family:Consolas,monospace; font-size:12px; color:#d7e7ff; }
+.detail { padding:18px; }
+.detail h2 { margin:8px 0; font-size:18px; }
+.detail p { color:#c9d6e8; line-height:1.55; }
+.badge { display:inline-block; border:1px solid var(--line); border-radius:999px; padding:2px 8px; font-size:11px; color:var(--muted); }
+</style></head><body>
+<div class="app">
+  <aside>
+    <div class="brand"><div class="mark">DO</div><div><h1>DeepOpen</h1>
+      <div class="sub">v0.4.0 · 195 条规则</div></div></div>
+    <label>扫描路径</label><div class="box">examples</div>
+    <label>配置档</label><div class="box">all · 全部规则</div>
+    <button>开始检查</button>
+    <button class="ghost">导出 HTML</button>
+    <p class="hint">文件 9 · 命中 31 · 16ms<br>只监听本机 127.0.0.1</p>
+  </aside>
+  <main>
+    <div class="stats"><div class="stat critical"><b>0</b><span>critical</span></div><div class="stat high"><b>18</b><span>high</span></div><div class="stat medium"><b>8</b><span>medium</span></div><div class="stat low"><b>5</b><span>low</span></div><div class="stat info"><b>0</b><span>info</span></div></div>
+    <div class="layout">
+      <div class="list"><table><thead><tr><th>级别</th><th>规则</th><th>位置</th></tr></thead>
+      <tbody><tr class=' selected'><td class='sev high'>high</td><td>C001<br>使用 gets</td><td>c\unsafe.c:1<br><code>gets(buf);</code></td></tr><tr class=''><td class='sev high'>high</td><td>C002<br>strcpy / sprintf 无界拷贝</td><td>c\unsafe.c:2<br><code>strcpy(dst, src);</code></td></tr><tr class=''><td class='sev high'>high</td><td>C003<br>C 库 system() 执行命令</td><td>c\unsafe.c:3<br><code>system(cmd);</code></td></tr><tr class=''><td class='sev high'>high</td><td>GO001<br>shell 执行拼接命令</td><td>go\main.go:10<br><code>exec.Command(&quot;sh&quot;, &quot;-c&quot;, &quot;echo hi&quot;)</code></td></tr><tr class=''><td class='sev high'>high</td><td>GO002<br>TLS InsecureSkipVerify</td><td>go\main.go:11<br><code>_ = tls.Config{InsecureSkipVerify: true}</code></td></tr><tr class=''><td class='sev high'>high</td><td>GO003<br>fmt.Sprintf 拼接 SQL</td><td>go\main.go:12<br><code>query := fmt.Sprintf(&quot;SELECT * FROM users WHERE name = &#x27;%s&#x27;&quot;, &quot;x&quot;)</code></td></tr><tr class=''><td class='sev high'>high</td><td>SEC004<br>硬编码口令或 API Key 赋值</td><td>insecure_patterns.py:8<br><code>PASSWORD = &quot;supersecret-demo-key&quot;</code></td></tr><tr class=''><td class='sev high'>high</td><td>SEC004<br>硬编码口令或 API Key 赋值</td><td>insecure_patterns.py:9<br><code>API_KEY = &quot;abcdefghijklmnopqrstuvwxyz&quot;</code></td></tr></tbody></table></div>
+      <div class="detail">
+        <div class="sev high">high · security</div>
+        <h2>C001 使用 gets</h2>
+        <p><span class="badge">c</span>
+           CWE-120</p>
+        <p><code>c\unsafe.c:1</code></p>
+        <p><code>gets(buf);</code></p>
+        <p>gets 无法限制长度，缓冲区可能被写穿。</p>
+        <p><strong>加固建议</strong><br>改用 fgets，并传入缓冲区大小。</p>
+      </div>
+    </div>
+  </main>
+</div>
+</body></html>

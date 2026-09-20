@@ -1,0 +1,123 @@
+"""框架与前端补充规则。"""
+
+from __future__ import annotations
+
+from deepopen.models import Category, Severity
+from deepopen.patterns.base import PatternRule, compile_re as _re
+
+PY = frozenset({".py", ".pyw"})
+JS = frozenset({".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"})
+YAML = frozenset({".yml", ".yaml"})
+
+FRAMEWORK_RULES: tuple[PatternRule, ...] = (
+    PatternRule(
+        rule_id="PY016",
+        title="ALLOWED_HOSTS 允许任意主机",
+        severity=Severity.HIGH,
+        category=Category.SECURITY,
+        pattern=_re(r"ALLOWED_HOSTS\s*=\s*\[[^\]]*\*"),
+        message="Django 接受任意 Host 时，缓存和密码重置链接可能被指向其它域名。",
+        remediation="写成明确域名列表，不要使用 *。",
+        cwe="CWE-644",
+        suffixes=PY,
+    ),
+    PatternRule(
+        rule_id="PY017",
+        title="会话/CSRF cookie 未要求 HTTPS",
+        severity=Severity.MEDIUM,
+        category=Category.SECURITY,
+        pattern=_re(r"(?:SESSION_COOKIE_SECURE|CSRF_COOKIE_SECURE)\s*=\s*False"),
+        message="未设置 Secure 的会话 cookie 可能经明文 HTTP 发送。",
+        remediation="生产环境设为 True，并开启 HTTPS 跳转。",
+        cwe="CWE-614",
+        suffixes=PY,
+    ),
+    PatternRule(
+        rule_id="PY018",
+        title="关闭 HTTPS 强制跳转",
+        severity=Severity.MEDIUM,
+        category=Category.SECURITY,
+        pattern=_re(r"SECURE_SSL_REDIRECT\s*=\s*False"),
+        message="应用可能继续通过明文 HTTP 对外服务。",
+        remediation="生产环境开启 SECURE_SSL_REDIRECT。",
+        cwe="CWE-319",
+        suffixes=PY,
+    ),
+    PatternRule(
+        rule_id="PY019",
+        title="CORS 允许全部来源",
+        severity=Severity.MEDIUM,
+        category=Category.SECURITY,
+        pattern=_re(r"CORS_ALLOW_ALL_ORIGINS\s*=\s*True"),
+        message="任意网站的前端都可能带着用户身份访问你的接口。",
+        remediation="改为明确 Origin 白名单。",
+        cwe="CWE-942",
+        suffixes=PY,
+    ),
+    PatternRule(
+        rule_id="PY020",
+        title="监听所有网卡",
+        severity=Severity.LOW,
+        category=Category.SECURITY,
+        pattern=_re(r"""(?:host|HOST)\s*=\s*['\"]0\.0\.0\.0['\"]|bind\s*\(\s*\(\s*['\"]0\.0\.0\.0['\"]"""),
+        message="绑定 0.0.0.0 会把服务暴露到所有网络接口。",
+        remediation="本机开发绑 127.0.0.1；对外服务放在反向代理后面并限制来源。",
+        cwe="CWE-605",
+        suffixes=PY,
+    ),
+    PatternRule(
+        rule_id="JS011",
+        title="把未校验值赋给 location",
+        severity=Severity.HIGH,
+        category=Category.SECURITY,
+        pattern=_re(r"window\.location(?:\.href)?\s*="),
+        message="未校验的跳转目标可能把用户带到不可信页面。",
+        remediation="只允许相对路径或本站域名白名单。",
+        cwe="CWE-601",
+        suffixes=JS,
+    ),
+    PatternRule(
+        rule_id="JS012",
+        title="修改 document.domain",
+        severity=Severity.MEDIUM,
+        category=Category.SECURITY,
+        pattern=_re(r"document\.domain\s*="),
+        message="放宽 document.domain 会削弱源隔离。",
+        remediation="不要修改 document.domain，改用 postMessage 并校验 origin。",
+        cwe="CWE-346",
+        suffixes=JS,
+    ),
+    PatternRule(
+        rule_id="JS013",
+        title="对象原型污染迹象",
+        severity=Severity.MEDIUM,
+        category=Category.SECURITY,
+        pattern=_re(r"""\[['"]__proto__['"]\]|\[['"]constructor['"]\]\s*\[['"]prototype['"]\]"""),
+        message="向 __proto__ / constructor.prototype 赋值可能影响所有对象。",
+        remediation="用 Object.create(null) 或 Map 保存外部键值，禁止把用户键写进原型。",
+        cwe="CWE-1321",
+        suffixes=JS,
+    ),
+    PatternRule(
+        rule_id="K8S003",
+        title="挂载宿主机路径",
+        severity=Severity.HIGH,
+        category=Category.CONFIG,
+        pattern=_re(r"hostPath\s*:"),
+        message="hostPath 让容器直接访问宿主机文件系统。",
+        remediation="改用卷声明或更窄的存储接口，避免挂载宿主机目录。",
+        cwe="CWE-250",
+        suffixes=YAML,
+    ),
+    PatternRule(
+        rule_id="K8S004",
+        title="容器以 UID 0 运行",
+        severity=Severity.MEDIUM,
+        category=Category.CONFIG,
+        pattern=_re(r"runAsUser\s*:\s*0\b"),
+        message="以 UID 0 运行等于容器内 root。",
+        remediation="指定非 0 的 runAsUser，并设置 runAsNonRoot: true。",
+        cwe="CWE-250",
+        suffixes=YAML,
+    ),
+)

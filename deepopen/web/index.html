@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DeepOpen 代码检查台</title>
+  <style>
+    :root {
+      --bg: #08111d;
+      --panel: #0f1a2a;
+      --panel-2: #132033;
+      --line: #24344c;
+      --text: #e8eef7;
+      --muted: #8ea0b8;
+      --mint: #3ee0b2;
+      --gold: #f3c15a;
+      --coral: #ff6b7a;
+      --violet: #c084fc;
+      --sky: #5ec8ff;
+      --ok: #3ee0b2;
+      --font: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      --mono: "Cascadia Code", "Consolas", monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); }
+    body {
+      background-image:
+        radial-gradient(1200px 500px at 10% -10%, rgba(62, 224, 178, .08), transparent 50%),
+        linear-gradient(180deg, rgba(255,255,255,.02), transparent 30%);
+    }
+    .app { display: grid; grid-template-columns: 300px 1fr; min-height: 100%; }
+    aside {
+      border-right: 1px solid var(--line);
+      background: rgba(15, 26, 42, .92);
+      padding: 22px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .brand { display: flex; gap: 12px; align-items: center; }
+    .mark {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--mint), #1a8f8a);
+      color: #062019; display: grid; place-items: center;
+      font-weight: 800; font-family: var(--mono);
+    }
+    .brand h1 { font-size: 16px; margin: 0; letter-spacing: .04em; }
+    .brand p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+    label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 6px; }
+    input[type=text], select {
+      width: 100%; background: var(--bg); color: var(--text);
+      border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font: inherit;
+    }
+    .row { display: flex; gap: 8px; }
+    button {
+      border: 0; border-radius: 10px; padding: 10px 12px; font: inherit; cursor: pointer;
+      background: var(--mint); color: #062019; font-weight: 700;
+    }
+    button.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); font-weight: 600; }
+    button:disabled { opacity: .5; cursor: wait; }
+    .tabs { display: flex; gap: 6px; }
+    .tabs button { flex: 1; font-size: 12px; }
+    .tabs button.active { background: var(--panel-2); color: var(--mint); border: 1px solid var(--mint); }
+    .hint { color: var(--muted); font-size: 12px; line-height: 1.5; }
+    main { padding: 22px 26px 40px; min-width: 0; }
+    .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
+    .stat {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px;
+    }
+    .stat b { display: block; font-size: 26px; }
+    .stat span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+    .stat.critical b { color: var(--violet); }
+    .stat.high b { color: var(--coral); }
+    .stat.medium b { color: var(--gold); }
+    .stat.low b { color: var(--sky); }
+    .stat.info b { color: var(--muted); }
+    .toolbar { display: flex; gap: 8px; margin: 12px 0 16px; flex-wrap: wrap; align-items: center; }
+    .chip {
+      border: 1px solid var(--line); background: var(--panel); color: var(--muted);
+      border-radius: 999px; padding: 6px 10px; font-size: 12px; cursor: pointer;
+    }
+    .chip.on { color: var(--text); border-color: var(--mint); }
+    .layout { display: grid; grid-template-columns: 1.2fr .8fr; gap: 16px; align-items: start; }
+    .list, .detail, .panel {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; color: var(--muted); font-size: 11px; letter-spacing: .05em; padding: 10px 12px; }
+    td { padding: 10px 12px; border-top: 1px solid var(--line); vertical-align: top; cursor: pointer; }
+    tr.selected td { background: #173047; }
+    .sev { font-family: var(--mono); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .sev.critical { color: var(--violet); }
+    .sev.high { color: var(--coral); }
+    .sev.medium { color: var(--gold); }
+    .sev.low { color: var(--sky); }
+    .sev.info { color: var(--muted); }
+    code { font-family: var(--mono); font-size: 12px; color: #d7e7ff; }
+    .detail { padding: 18px; min-height: 280px; }
+    .detail h2 { margin: 0 0 8px; font-size: 18px; }
+    .detail p { color: #c9d6e8; line-height: 1.6; }
+    .empty { color: var(--muted); padding: 28px; }
+    .section { margin-bottom: 18px; }
+    .section h3 { margin: 0 0 8px; font-size: 15px; }
+    .codebox { background:#08111d; border-radius:10px; padding:10px 12px; font-family:var(--mono); font-size:12px; overflow:auto; }
+    .codebox .hit { color: var(--coral); }
+    .badge { display:inline-block; border:1px solid var(--line); border-radius:999px; padding:2px 8px; font-size:11px; color:var(--muted); margin-right:6px; }
+    #view-rules input { margin-bottom:12px; max-width:320px; }
+    @media (max-width: 1080px) {
+      .app { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(3, 1fr); }
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="brand">
+        <div class="mark">DO</div>
+        <div>
+          <h1>DeepOpen</h1>
+          <p id="ver">本地代码检查台</p>
+        </div>
+      </div>
+      <div class="tabs">
+        <button class="ghost active" data-tab="scan">扫描</button>
+        <button class="ghost" data-tab="rules">规则</button>
+        <button class="ghost" data-tab="guide">清单</button>
+      </div>
+      <div>
+        <label for="path">扫描路径</label>
+        <input id="path" type="text" spellcheck="false">
+      </div>
+      <div>
+        <label for="profile">配置档</label>
+        <select id="profile">
+          <option value="all">all · 全部规则</option>
+          <option value="security">security · 安全 / 密钥 / 配置</option>
+          <option value="bug">bug · 缺陷 / 质量</option>
+          <option value="secret">secret · 仅密钥</option>
+        </select>
+      </div>
+      <div class="row">
+        <button id="run" style="flex:1">开始检查</button>
+        <button id="export" class="ghost">导出 HTML</button>
+      </div>
+      <div class="row">
+        <button id="export-json" class="ghost" style="flex:1">导出 JSON</button>
+        <button id="preview-fix" class="ghost" style="flex:1">预览修复</button>
+      </div>
+      <label class="hint"><input id="staged" type="checkbox"> 仅 Git 暂存文件</label>
+      <label class="hint"><input id="show-base" type="checkbox"> 显示基线已接受项</label>
+      <p class="hint" id="scan-meta">只监听本机 127.0.0.1。检查的是源码模式，不是渗透测试。</p>
+    </aside>
+    <main>
+      <section id="view-scan">
+        <div class="stats" id="stats"></div>
+        <div class="toolbar">
+          <input id="q" type="text" placeholder="过滤规则、路径、说明" style="max-width:320px">
+          <span class="chip on" data-sev="all">全部</span>
+          <span class="chip" data-sev="critical">critical</span>
+          <span class="chip" data-sev="high">high</span>
+          <span class="chip" data-sev="medium">medium</span>
+          <span class="chip" data-sev="low">low</span>
+          <span class="chip" data-sev="info">info</span>
+          <select id="cat" style="max-width:140px">
+            <option value="all">全部类别</option>
+            <option value="security">security</option>
+            <option value="secret">secret</option>
+            <option value="bug">bug</option>
+            <option value="quality">quality</option>
+            <option value="config">config</option>
+          </select>
+        </div>
+        <div class="layout">
+          <div class="list">
+            <table>
+              <thead><tr><th>级别</th><th>规则</th><th>位置</th></tr></thead>
+              <tbody id="rows"><tr><td colspan="3" class="empty">输入路径后点击「开始检查」。</td></tr></tbody>
+            </table>
+          </div>
+          <div class="detail" id="detail">
+            <h2>等待扫描</h2>
+            <p>命中项会显示说明和加固建议。请在自己的仓库上运行，不要把示例里的不安全写法拷进业务代码。</p>
+          </div>
+        </div>
+      </section>
+      <section id="view-rules" hidden></section>
+      <section id="view-guide" hidden></section>
+    </main>
+  </div>
+  <script>
+    const state = { findings: [], selected: 0, sev: "all", cat: "all", q: "", last: null, rules: [] };
+
+    const $ = (id) => document.getElementById(id);
+
+    async function boot() {
+      const meta = await (await fetch("/api/meta")).json();
+      $("ver").textContent = "v" + meta.version + " · " + meta.rule_count + " 条规则";
+      $("path").value = meta.default_path || "";
+      const params = new URLSearchParams(location.search);
+      if (params.get("path")) $("path").value = params.get("path");
+      if (params.get("profile") && $("profile").querySelector(`option[value="${params.get("profile")}"]`)) {
+        $("profile").value = params.get("profile");
+      }
+      renderStats({ critical:0, high:0, medium:0, low:0, info:0 });
+      const guide = await (await fetch("/api/checklist")).json();
+      $("view-guide").innerHTML = guide.sections.map(sec =>
+        `<div class="panel section" style="padding:16px 18px;margin-bottom:12px"><h3>${esc(sec.title)}</h3><ul>${sec.items.map(i => `<li>${esc(i)}</li>`).join("")}</ul></div>`
+      ).join("");
+      const rules = await (await fetch("/api/rules")).json();
+      state.rules = rules.rules || [];
+      renderRules();
+      if (params.get("autoscan") === "1") $("run").click();
+    }
+
+    function renderRules(filter) {
+      const q = (filter || "").toLowerCase();
+      const rows = state.rules.filter(r => !q || (r.rule_id + r.title + (r.cwe || "")).toLowerCase().includes(q));
+      $("view-rules").innerHTML = `<input id="ruleq" type="text" placeholder="搜索规则 ID / 标题" value="${esc(filter || "")}"><div class="list"><table><thead><tr><th>ID</th><th>级别</th><th>规则</th></tr></thead><tbody>${
+        rows.map(r => `<tr><td><code>${esc(r.rule_id)}</code></td><td class="sev ${esc(r.severity)}">${esc(r.severity)}</td><td>${esc(r.title)}${r.cwe ? " · " + esc(r.cwe) : ""}</td></tr>`).join("")
+      }</tbody></table></div>`;
+      const box = $("ruleq");
+      if (box) box.oninput = (ev) => renderRules(ev.target.value);
+    }
+
+    function renderStats(counts) {
+      $("stats").innerHTML = ["critical","high","medium","low","info"].map(k =>
+        `<div class="stat ${k}"><b>${counts[k] || 0}</b><span>${k}</span></div>`
+      ).join("");
+    }
+
+    function visible() {
+      const q = state.q.trim().toLowerCase();
+      return state.findings.filter(item => {
+        if (state.sev !== "all" && item.severity !== state.sev) return false;
+        if (state.cat !== "all" && item.category !== state.cat) return false;
+        if (!q) return true;
+        return (item.rule_id + item.title + item.path + item.message + item.snippet).toLowerCase().includes(q);
+      });
+    }
+
+    function renderList() {
+      const items = visible();
+      if (!items.length) {
+        $("rows").innerHTML = `<tr><td colspan="3" class="empty">没有匹配的命中项。</td></tr>`;
+        return;
+      }
+      $("rows").innerHTML = items.map((item, idx) => `
+        <tr data-idx="${idx}" class="${idx === state.selected ? "selected" : ""}">
+          <td class="sev ${esc(item.severity)}">${esc(item.severity)}</td>
+          <td>${esc(item.rule_id)}<br>${esc(item.title)}</td>
+          <td>${esc(item.path)}:${item.line}<br><code>${esc(item.snippet)}</code></td>
+        </tr>`).join("");
+      renderDetail(items[state.selected] || items[0]);
+    }
+
+    async function renderDetail(item) {
+      if (!item) return;
+      const extra = [
+        item.fixable ? '<span class="badge">可自动修复</span>' : "",
+        item.baselined ? '<span class="badge">基线已接受</span>' : "",
+        item.language ? `<span class="badge">${esc(item.language)}</span>` : "",
+      ].join("");
+      $("detail").innerHTML = `
+        <div class="sev ${esc(item.severity)}">${esc(item.severity)} · ${esc(item.category)}</div>
+        <h2>${esc(item.rule_id)} ${esc(item.title)}</h2>
+        <p>${extra}</p>
+        <p><code>${esc(item.path)}:${item.line}</code></p>
+        <p><code>${esc(item.snippet)}</code></p>
+        <p>${esc(item.message)}</p>
+        <p><strong>加固建议</strong><br>${esc(item.remediation)}</p>
+        ${item.cwe ? `<p>${esc(item.cwe)}</p>` : ""}
+        <p><button class="ghost" id="copy-fix">复制加固建议</button></p>
+        <div class="codebox" id="ctx">加载上下文…</div>
+      `;
+      const copy = $("copy-fix");
+      if (copy) copy.onclick = () => navigator.clipboard.writeText(item.remediation || "");
+      try {
+        const res = await fetch(`/api/snippet?path=${encodeURIComponent(item.path)}&line=${item.line}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "无法读取");
+        $("ctx").innerHTML = data.lines.map(row =>
+          `<div class="${row.hit ? "hit" : ""}">${row.n.toString().padStart(4," ")}  ${esc(row.text)}</div>`
+        ).join("");
+      } catch (err) {
+        $("ctx").textContent = "没有源码上下文：" + err.message;
+      }
+    }
+
+    function esc(value) {
+      return String(value ?? "").replace(/[&<>"']/g, ch => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+      }[ch]));
+    }
+
+    $("run").onclick = async () => {
+      $("run").disabled = true;
+      $("run").textContent = "检查中…";
+      try {
+        const res = await fetch("/api/scan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            path: $("path").value,
+            staged: $("staged").checked,
+            show_baseline: $("show-base").checked,
+            profile: $("profile").value
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "扫描失败");
+        state.last = data;
+        state.findings = data.findings || [];
+        state.selected = 0;
+        renderStats(data.counts || {});
+        const langs = data.languages ? Object.entries(data.languages).map(([k,v]) => k + "=" + v).join(" · ") : "";
+        $("scan-meta").textContent = `文件 ${data.files_scanned || 0} · 命中 ${data.finding_count || 0} · ${data.duration_ms || 0}ms` +
+          (data.profile ? ` · ${data.profile}` : "") +
+          (data.baselined_count ? ` · 基线忽略 ${data.baselined_count}` : "") +
+          (langs ? ` · ${langs}` : "");
+        renderList();
+        if (!state.findings.length) {
+          $("detail").innerHTML = "<h2>未发现规则命中</h2><p>这不代表没有缺陷，只说明当前规则没有匹配。</p>";
+        }
+      } catch (err) {
+        $("detail").innerHTML = `<h2>无法完成扫描</h2><p>${esc(err.message)}</p>`;
+      } finally {
+        $("run").disabled = false;
+        $("run").textContent = "开始检查";
+      }
+    };
+
+    $("export").onclick = async () => {
+      const res = await fetch("/api/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: $("path").value, staged: $("staged").checked, format: "html", profile: $("profile").value })
+      });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "deepopen-report.html"; a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    $("rows").onclick = (ev) => {
+      const tr = ev.target.closest("tr[data-idx]");
+      if (!tr) return;
+      state.selected = Number(tr.dataset.idx);
+      renderList();
+    };
+
+    $("export-json").onclick = async () => {
+      const res = await fetch("/api/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: $("path").value, staged: $("staged").checked, show_baseline: $("show-base").checked, profile: $("profile").value })
+      });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "deepopen-report.json"; a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    $("preview-fix").onclick = async () => {
+      const res = await fetch("/api/fix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: $("path").value, apply: false })
+      });
+      const data = await res.json();
+      const lines = (data.changes || []).map(c => `${c.path}:${c.line} ${c.rule_id}\n- ${c.before}\n+ ${c.after}`);
+      $("detail").innerHTML = `<h2>修复预览</h2><p>共 ${data.changes ? data.changes.length : 0} 处，仅质量问题。要用 CLI 写回：<code>python -m deepopen fix --apply</code></p><pre class="codebox">${esc(lines.join("\n\n") || "没有可自动修复的命中。")}</pre>`;
+    };
+
+    $("cat").onchange = (ev) => { state.cat = ev.target.value; state.selected = 0; renderList(); };
+    $("q").oninput = (ev) => { state.q = ev.target.value; state.selected = 0; renderList(); };
+
+    document.querySelectorAll(".chip").forEach(chip => {
+      chip.onclick = () => {
+        document.querySelectorAll(".chip").forEach(c => c.classList.remove("on"));
+        chip.classList.add("on");
+        state.sev = chip.dataset.sev;
+        state.selected = 0;
+        renderList();
+      };
+    });
+
+    document.querySelectorAll(".tabs button").forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const tab = btn.dataset.tab;
+        $("view-scan").hidden = tab !== "scan";
+        $("view-rules").hidden = tab !== "rules";
+        $("view-guide").hidden = tab !== "guide";
+      };
+    });
+
+    boot();
+  </script>
+</body>
+</html>

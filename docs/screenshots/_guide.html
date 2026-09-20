@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><style>
+html,body { margin:0; background:#08111d; color:#e8eef7; font-family:"Segoe UI","Microsoft YaHei",sans-serif; }
+.app { display:grid; grid-template-columns:280px 1fr; min-height:100%; }
+aside { border-right:1px solid #24344c; padding:22px 18px; background:#0f1a2a; }
+.brand { display:flex; gap:12px; align-items:center; }
+.mark { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#3ee0b2,#1a8f8a);
+  color:#062019; display:grid; place-items:center; font-weight:800; }
+.tabs { display:flex; gap:6px; margin:18px 0; }
+.tab { flex:1; text-align:center; border:1px solid #3ee0b2; color:#3ee0b2; border-radius:10px; padding:8px; font-size:12px; }
+.idle { border-color:#24344c; color:#e8eef7; }
+main { padding:22px 26px; }
+.panel { background:#0f1a2a; border:1px solid #24344c; border-radius:16px; padding:16px 18px; margin-bottom:12px; }
+h3 { margin:0 0 8px; font-size:15px; } ul { margin:0; padding-left:18px; color:#c9d6e8; line-height:1.6; }
+h1 { font-size:16px; margin:0; } .sub { color:#8ea0b8; font-size:12px; }
+</style></head><body>
+<div class="app">
+  <aside>
+    <div class="brand"><div class="mark">DO</div><div><h1>DeepOpen</h1>
+      <div class="sub">v0.4.0 · 195 条规则</div></div></div>
+    <div class="tabs"><div class="tab idle">扫描</div><div class="tab idle">规则</div><div class="tab">清单</div></div>
+  </aside>
+  <main><div class="panel"><h3>密钥与配置</h3><ul><li>口令、令牌、私钥只放环境变量或密钥托管，不进仓库</li><li>每个环境使用不同凭据，泄露后立刻轮换</li><li>生产关闭调试页和详细堆栈</li><li>SECRET_KEY / JWT 密钥足够长且随机</li><li>配置按环境拆分，禁止把生产地址写进默认值</li><li>超时、限流、功能开关要有明确默认值</li></ul></div><div class="panel"><h3>输入与数据</h3><ul><li>外部输入先校验类型、长度和允许值</li><li>SQL / 命令 / 模板使用参数化或官方转义 API</li><li>HTML 默认转义；下载路径规范化到固定目录</li><li>不要对不可信数据做 pickle / 反序列化</li><li>解析 JSON/YAML 限制大小，失败返回明确错误</li><li>数字和日期解析失败要有分支，不要让异常冒顶</li></ul></div><div class="panel"><h3>身份与会话</h3><ul><li>口令哈希使用 Argon2 / bcrypt / scrypt</li><li>会话 cookie 设置 HttpOnly、Secure、SameSite</li><li>权限检查不要用 assert</li><li>JWT 显式算法并校验签名</li><li>OTP / 重置码使用 secrets 或 crypto 随机数</li></ul></div><div class="panel"><h3>传输、依赖与运行环境</h3><ul><li>锁定依赖并提交 lock 文件</li><li>保持 TLS 校验</li><li>容器非 root、非 privileged、不挂 docker.sock</li><li>不要把远程脚本直接交给 shell</li><li>出站 URL 做协议和主机白名单</li></ul></div></main>
+</div>
+</body></html>

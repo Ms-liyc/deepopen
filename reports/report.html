@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>DeepOpen 检查报告</title>
+  <style>
+    :root { font-family: "Segoe UI", sans-serif; background: #0f1419; color: #e7ecf3; }
+    body { margin: 0; padding: 32px; }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    .meta { color: #9aa7b8; margin-bottom: 24px; }
+    .cards { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+    .card { background: #1b232d; border-radius: 12px; padding: 16px 20px; min-width: 110px; }
+    .card .n { font-size: 28px; font-weight: 700; }
+    .card .l { color: #9aa7b8; text-transform: uppercase; font-size: 12px; }
+    .critical .n { color: #d946ef; }
+    .high .n { color: #fb7185; }
+    .medium .n { color: #fbbf24; }
+    .low .n { color: #38bdf8; }
+    table { width: 100%; border-collapse: collapse; background: #1b232d; border-radius: 12px; overflow: hidden; }
+    th, td { text-align: left; padding: 12px 14px; vertical-align: top; border-bottom: 1px solid #2a3441; }
+    th { color: #9aa7b8; font-size: 12px; letter-spacing: .04em; }
+    code { background: #0f1419; padding: 2px 6px; border-radius: 6px; }
+    .sev { font-weight: 700; text-transform: uppercase; font-size: 12px; }
+    .empty { color: #9aa7b8; }
+  </style>
+</head>
+<body>
+  <h1>DeepOpen 代码检查报告</h1>
+  <p class="meta">目录 D:\yu\deepopen\examples · 文件 2 · 命中 10</p>
+  <div class="cards"><div class="card critical"><div class="n">0</div><div class="l">critical</div></div><div class="card high"><div class="n">6</div><div class="l">high</div></div><div class="card medium"><div class="n">2</div><div class="l">medium</div></div><div class="card low"><div class="n">2</div><div class="l">low</div></div><div class="card info"><div class="n">0</div><div class="l">info</div></div></div>
+  
+  <table>
+    <thead>
+      <tr><th>级别</th><th>规则</th><th>位置</th><th>说明与加固</th></tr>
+    </thead>
+    <tbody><tr><td class='sev high'>high</td><td>SEC004<br>硬编码口令或 API Key 赋值</td><td>insecure_patterns.py:8<br><code>PASSWORD = &quot;supersecret-demo-key&quot;</code></td><td>疑似把口令、密钥或访问令牌直接写在源码里。<br><strong>加固：</strong>改为从环境变量或密钥管理服务读取；仓库中只保留占位符或示例值（如 CHANGE_ME）。</td></tr><tr><td class='sev high'>high</td><td>SEC004<br>硬编码口令或 API Key 赋值</td><td>insecure_patterns.py:9<br><code>API_KEY = &quot;abcdefghijklmnopqrstuvwxyz&quot;</code></td><td>疑似把口令、密钥或访问令牌直接写在源码里。<br><strong>加固：</strong>改为从环境变量或密钥管理服务读取；仓库中只保留占位符或示例值（如 CHANGE_ME）。</td></tr><tr><td class='sev high'>high</td><td>AST002<br>不安全反序列化</td><td>insecure_patterns.py:13<br><code>return pickle.loads(raw)</code></td><td>AST 确认调用了 pickle.loads。<br><strong>加固：</strong>对外数据使用 JSON 等数据格式；不要反序列化不可信字节流。</td></tr><tr><td class='sev high'>high</td><td>AST008<br>疑似拼接 SQL</td><td>insecure_patterns.py:18<br><code>conn.execute(f&quot;SELECT * FROM users WHERE name = &#x27;{name}&#x27;&quot;)</code></td><td>execute 的第一个参数是拼接/格式化出来的字符串，而不是常量加参数。<br><strong>加固：</strong>使用参数化查询：cursor.execute(sql, (param,))。</td></tr><tr><td class='sev high'>high</td><td>AST003<br>通过 shell 执行命令</td><td>insecure_patterns.py:22<br><code>os.system(&quot;echo &quot; + arg)</code></td><td>AST 确认调用了 os.system。<br><strong>加固：</strong>改用 subprocess.run([prog, arg...], shell=False)，并对参数做白名单校验。</td></tr><tr><td class='sev high'>high</td><td>AST001<br>eval / exec 动态执行</td><td>insecure_patterns.py:26<br><code>return eval(text)</code></td><td>AST 确认调用了 eval 或 exec。<br><strong>加固：</strong>不要对不可信输入执行动态代码；用解析器或白名单分支替代。</td></tr><tr><td class='sev medium'>medium</td><td>AST013<br>可变默认参数</td><td>insecure_patterns.py:29<br><code>def add_item(items=[]):</code></td><td>list/dict/set 默认参数会在调用之间共享。<br><strong>加固：</strong>默认值用 None，在函数体内初始化新容器。</td></tr><tr><td class='sev medium'>medium</td><td>AST010<br>裸 except</td><td>insecure_patterns.py:37<br><code>except:</code></td><td>except: 会捕获 BaseException。<br><strong>加固：</strong>改成 except Exception，并记录或重新抛出。</td></tr><tr><td class='sev low'>low</td><td>AST011<br>空 except 主体 pass</td><td>insecure_patterns.py:37<br><code>except:</code></td><td>异常被静默丢弃。<br><strong>加固：</strong>记录日志，或在注释中说明为何可以忽略。</td></tr><tr><td class='sev low'>low</td><td>AST009<br>用 == 比较 None</td><td>insecure_patterns.py:42<br><code>return value == None</code></td><td>对 None 应使用 is / is not。<br><strong>加固：</strong>写成 `x is None` 或 `x is not None`。</td></tr></tbody>
+  </table>
+</body>
+</html>

@@ -1,0 +1,77 @@
+"""Java / Kotlin 常见不安全 API。"""
+
+from __future__ import annotations
+
+from deepopen.models import Category, Severity
+from deepopen.patterns.base import PatternRule, compile_re as _re
+
+JAVA = frozenset({".java", ".kt"})
+
+JAVA_RULES: tuple[PatternRule, ...] = (
+    PatternRule(
+        rule_id="JV001",
+        title="Runtime.exec / ProcessBuilder 拼接命令",
+        severity=Severity.HIGH,
+        category=Category.SECURITY,
+        pattern=_re(r"Runtime\.getRuntime\(\)\.exec\s*\(|new\s+(?:[\w.]+\.)?ProcessBuilder\s*\([^)]*\+"),
+        message="命令字符串拼接会改变进程参数结构。",
+        remediation="ProcessBuilder 传入参数列表，并对每个参数做白名单校验。",
+        cwe="CWE-78",
+        suffixes=JAVA,
+    ),
+    PatternRule(
+        rule_id="JV002",
+        title="Statement 拼接 SQL",
+        severity=Severity.HIGH,
+        category=Category.SECURITY,
+        pattern=_re(r"(?:createStatement\s*\(|\.execute(?:Query|Update)?\s*\(\s*[^)]*\+)"),
+        message="用 + 拼 SQL 会破坏查询结构。",
+        remediation="改用 PreparedStatement 占位符绑定参数。",
+        cwe="CWE-89",
+        suffixes=JAVA,
+    ),
+    PatternRule(
+        rule_id="JV003",
+        title="信任所有 TLS 证书",
+        severity=Severity.HIGH,
+        category=Category.SECURITY,
+        pattern=_re(r"TrustAll|X509TrustManager|ALLOW_ALL_HOSTNAME_VERIFIER|setHostnameVerifier"),
+        message="自定义 TrustManager / HostnameVerifier 经常被写成“全部通过”。",
+        remediation="使用系统/默认信任库；自签证书时导入指定 CA，而不是关闭校验。",
+        cwe="CWE-295",
+        suffixes=JAVA,
+    ),
+    PatternRule(
+        rule_id="JV004",
+        title="弱哈希或弱加密",
+        severity=Severity.MEDIUM,
+        category=Category.SECURITY,
+        pattern=_re(r"""MessageDigest\.getInstance\s*\(\s*['\"](?:MD5|SHA-?1)['\"]|Cipher\.getInstance\s*\(\s*['\"](?:DES|AES/ECB)"""),
+        message="MD5/SHA1/DES/ECB 不适合保护敏感数据。",
+        remediation="口令用 Argon2/bcrypt；加密用 AES-GCM 等带完整性的模式。",
+        cwe="CWE-327",
+        suffixes=JAVA,
+    ),
+    PatternRule(
+        rule_id="JV005",
+        title="Java 反序列化 ObjectInputStream",
+        severity=Severity.HIGH,
+        category=Category.SECURITY,
+        pattern=_re(r"new\s+(?:[\w.]+\.)?ObjectInputStream\s*\("),
+        message="Java 原生反序列化可触发危险对象还原。",
+        remediation="对外数据使用 JSON 等数据格式；必须反序列化时用白名单过滤器。",
+        cwe="CWE-502",
+        suffixes=JAVA,
+    ),
+    PatternRule(
+        rule_id="JV006",
+        title="随机数用于安全场景",
+        severity=Severity.MEDIUM,
+        category=Category.SECURITY,
+        pattern=_re(r"new\s+(?:[\w.]+\.)?Random\s*\("),
+        message="java.util.Random 不适合生成令牌或重置码。",
+        remediation="改用 SecureRandom。",
+        cwe="CWE-330",
+        suffixes=JAVA,
+    ),
+)

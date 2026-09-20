@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><style>
+html,body { margin:0; background:#071018; }
+.win { margin:24px; border:1px solid #2a3b55; border-radius:14px; overflow:hidden;
+  box-shadow: 0 18px 50px rgba(0,0,0,.45); }
+.bar { background:#122033; padding:10px 14px; display:flex; align-items:center; gap:8px; }
+.dot { width:10px; height:10px; border-radius:50%; }
+.r { background:#ff6b7a; } .y { background:#f3c15a; } .g { background:#3ee0b2; }
+.title { color:#8ea0b8; font:12px/1.4 Segoe UI,sans-serif; margin-left:8px; }
+pre { margin:0; padding:16px 18px 20px; background:#08111d; color:#d7e7ff;
+  font:13px/1.55 Consolas, Cascadia Code, monospace; }
+.ln { white-space:pre; }
+.high { color:#ff6b7a; font-weight:700; }
+.med { color:#f3c15a; font-weight:700; }
+.low { color:#5ec8ff; }
+.meta { color:#8ea0b8; }
+</style></head><body>
+<div class="win">
+  <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+    <span class="title">powershell · python -m deepopen scan examples</span></div>
+  <pre><div class="ln meta">扫描目录: D:\yu\deepopen\examples</div><div class="ln meta">已检查文件: 9  耗时: 16ms</div><div class="ln ">语言分布: c=1, docker=1, go=1, java=1, javascript=2, python=2, rust=1</div><div class="ln meta">问题统计: critical=0, high=18, medium=8, low=5, info=0</div><div class="ln meta">问题分类: security=19, secret=2, config=4, bug=3, quality=3</div><div class="ln ">&nbsp;</div><div class="ln high">[HIGH] C001 使用 gets</div><div class="ln ">  位置: c\unsafe.c:1</div><div class="ln ">  类别: security  CWE-120</div><div class="ln ">  代码: gets(buf);</div><div class="ln ">  说明: gets 无法限制长度，缓冲区可能被写穿。</div><div class="ln ">  加固: 改用 fgets，并传入缓冲区大小。</div><div class="ln ">&nbsp;</div><div class="ln high">[HIGH] C002 strcpy / sprintf 无界拷贝</div><div class="ln ">  位置: c\unsafe.c:2</div><div class="ln ">  类别: security  CWE-120</div><div class="ln ">  代码: strcpy(dst, src);</div><div class="ln ">  说明: 这些函数不检查目标缓冲区长度。</div><div class="ln ">  加固: 改用带长度参数的 API（strncpy_s / snprintf / scanf 宽度限制）。</div><div class="ln ">&nbsp;</div><div class="ln high">[HIGH] C003 C 库 system() 执行命令</div><div class="ln ">  位置: c\unsafe.c:3</div><div class="ln ">  类别: security  CWE-78</div><div class="ln ">  代码: system(cmd);</div><div class="ln ">  说明: system() 把字符串交给 shell。</div><div class="ln ">  加固: 用 execve 一类按参数数组启动进程，并对参数做白名单。</div><div class="ln ">&nbsp;</div><div class="ln high">[HIGH] GO001 shell 执行拼接命令</div>
+<div class="ln meta">… 其余命中已省略</div></pre>
+</div>
+</body></html>
