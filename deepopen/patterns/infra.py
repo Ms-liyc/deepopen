@@ -1,0 +1,138 @@
+"""Docker、K8s、Terraform、Shell、依赖清单相关模式。"""
+
+from __future__ import annotations
+
+from deepopen.models import Category, Severity
+from deepopen.patterns.base import PatternRule, compile_re as _re
+
+YAML = frozenset({".yml", ".yaml"})
+SHELL = frozenset({".sh", ".bash", ".zsh"})
+PS = frozenset({".ps1"})
+TF = frozenset({".tf", ".tfvars"})
+GH = frozenset({".yml", ".yaml"})
+
+INFRA_RULES: tuple[PatternRule, ...] = (
+    PatternRule(
+        rule_id="DK001",
+        title="容器以 root 运行",
+        severity=Severity.MEDIUM,
+        category=Category.CONFIG,
+        pattern=_re(r"^\s*USER\s+root\s*$"),
+        message="容器内使用 root 会放大逃逸后的影响。",
+        remediation="创建非特权用户并用 USER 切换；Kubernetes 再设 runAsNonRoot。",
+        cwe="CWE-250",
+        names=frozenset({"Dockerfile", "Containerfile"}),
+    ),
+    PatternRule(
+        rule_id="DK002",
+        title="Docker privileged 或挂载 docker.sock",
+        severity=Severity.HIGH,
+        category=Category.CONFIG,
+        pattern=_re(r"privileged:\s*true|docker\.sock|/var/run/docker\.sock"),
+        message="特权容器或 docker.sock 等价于把宿主机控制面暴露给容器。",
+        remediation="去掉 privileged；不要挂载 docker.sock。用更窄的套接字或 rootless 方案。",
+        cwe="CWE-250",
+        suffixes=YAML,
+        names=frozenset({"Dockerfile", "Containerfile", "docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"}),
+    ),
+    PatternRule(
+        rule_id="K8S001",
+        title="Kubernetes 特权或宿主命名空间",
+        severity=Severity.HIGH,
+        category=Category.CONFIG,
+        pattern=_re(r"privileged:\s*true|hostNetwork:\s*true|hostPID:\s*true|hostIPC:\s*true"),
+        message="特权与宿主命名空间会削弱容器隔离。",
+        remediation="关闭 privileged/hostNetwork/hostPID；设置 allowPrivilegeEscalation: false。",
+        cwe="CWE-250",
+        suffixes=YAML,
+    ),
+    PatternRule(
+        rule_id="K8S002",
+        title="允许提权",
+        severity=Severity.MEDIUM,
+        category=Category.CONFIG,
+        pattern=_re(r"allowPrivilegeEscalation:\s*true"),
+        message="允许提权会让容器进程获得更多 Linux 权能。",
+        remediation="设为 false，并使用只读根文件系统。",
+        cwe="CWE-250",
+        suffixes=YAML,
+    ),
+    PatternRule(
+        rule_id="SH001",
+        title="管道把下载内容交给 shell",
+        severity=Severity.HIGH,
+        category=Category.SECURITY,
+        pattern=_re(r"(?:curl|wget)[^\n]*\|\s*(?:sudo\s+)?(?:ba)?sh"),
+        message="把远程脚本直接交给 shell 等于执行不可控代码。",
+        remediation="先下载、校验校验和或签名，再执行固定脚本。",
+        cwe="CWE-494",
+        suffixes=SHELL | YAML | frozenset({".md"}),
+    ),
+    PatternRule(
+        rule_id="SH002",
+        title="chmod 777",
+        severity=Severity.MEDIUM,
+        category=Category.CONFIG,
+        pattern=_re(r"\bchmod\s+(?:-R\s+)?777\b"),
+        message="777 让任意用户可写，扩大被改写风险。",
+        remediation="按最小权限设置，例如 644/755，并明确属主。",
+        cwe="CWE-732",
+        suffixes=SHELL | YAML,
+        names=frozenset({"Dockerfile", "Containerfile"}),
+    ),
+    PatternRule(
+        rule_id="SH003",
+        title="curl/wget 关闭 TLS 校验",
+        severity=Severity.HIGH,
+        category=Category.SECURITY,
+        pattern=_re(r"(?:curl\s+[^\n]*\s-(?:k\b|-insecure)|wget\s+[^\n]*--no-check-certificate)"),
+        message="关闭校验会让下载内容被替换。",
+        remediation="保持证书校验；内网自签时安装企业 CA。",
+        cwe="CWE-295",
+        suffixes=SHELL | YAML,
+    ),
+    PatternRule(
+        rule_id="PS001",
+        title="PowerShell 绕过执行策略或 IEX",
+        severity=Severity.HIGH,
+        category=Category.SECURITY,
+        pattern=_re(r"Bypass|Unrestricted|Invoke-Expression|\bIEX\b"),
+        message="绕过执行策略或动态执行字符串会扩大脚本注入面。",
+        remediation="用签名脚本与 Constrained Language；避免 IEX 远程内容。",
+        cwe="CWE-95",
+        suffixes=PS,
+    ),
+    PatternRule(
+        rule_id="TF001",
+        title="云存储公共可读",
+        severity=Severity.HIGH,
+        category=Category.CONFIG,
+        pattern=_re(r"""acl\s*=\s*['\"]public-read|block_public_acls\s*=\s*false|publicly_readable\s*=\s*true"""),
+        message="存储桶/对象被标成公共可读。",
+        remediation="默认私有；必须公开时用独立静态站点桶并去掉敏感文件。",
+        cwe="CWE-284",
+        suffixes=TF,
+    ),
+    PatternRule(
+        rule_id="GH001",
+        title="GitHub Actions 拉取不可信代码并授予 secrets",
+        severity=Severity.MEDIUM,
+        category=Category.CONFIG,
+        pattern=_re(r"pull_request_target"),
+        message="pull_request_target 会在基础仓库权限下运行，若再检出 PR 代码会扩大风险。",
+        remediation="对外部 PR 用 pull_request；不要在该事件里把 secrets 暴露给不可信 workflow。",
+        cwe="CWE-829",
+        suffixes=GH,
+    ),
+    PatternRule(
+        rule_id="DEP001",
+        title="npm 生命周期脚本下载并执行",
+        severity=Severity.HIGH,
+        category=Category.SECURITY,
+        pattern=_re(r'"(?:preinstall|postinstall|install)"\s*:\s*"[^"]*(?:curl|wget|bash|node\s+-e)'),
+        message="安装钩子执行远程脚本会在依赖安装时引入不可控代码。",
+        remediation="去掉远程执行钩子；构建步骤放到受控 CI。",
+        cwe="CWE-494",
+        names=frozenset({"package.json"}),
+    ),
+)
