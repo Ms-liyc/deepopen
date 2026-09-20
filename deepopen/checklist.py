@@ -97,7 +97,14 @@ DeepOpen 开发加固清单（防守向）
    - 团队规范写进 deepopen.toml 的 [[rules]]，id 以 CUSTOM/TEAM 开头。
    - 确认误报写入基线；质量问题可用 deepopen fix 预览后 --apply。
 
-本工具只能发现「源码里能看出来的模式」，不能代替代码评审、测试、依赖审计和专业评估。
+12. 鉴权、业务、依赖公告
+   - 改状态接口默认要登录；不要关掉 CSRF、不要 permitAll / AllowAny。
+   - 价格、数量、角色、is_admin 只从服务端数据读，不要从请求体赋值。
+   - 按对象 ID 查询时带上当前用户或租户条件。
+   - 生产配置不要关 TLS、不要把口令写进 yaml/properties。
+   - 锁定依赖；可用 --advisories 查 OSV，但仍应定期跑 pip-audit / npm audit。
+
+本工具能发现源码里能看出来的模式、测试缺口和可选的公开依赖公告，不能代替代码评审、完整测试和持续 CVE 扫描。
 """.strip()
 
 CHECKLIST_SECTIONS = [
@@ -199,6 +206,8 @@ CHECKLIST_SECTIONS = [
             "CI 可用 --profile security，本地用 all 跑缺陷",
             "团队规范写进 [[rules]]，id 以 CUSTOM/TEAM 开头",
             "误报写入基线，质量问题用 deepopen fix 预览修复",
+            "改状态接口要鉴权；价格和角色不要来自请求体",
+            "锁定依赖，可选 --advisories；持续审计仍用 pip-audit / npm audit",
         ],
     },
     {

@@ -6,12 +6,14 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from deepopen.advisories import analyze_dependencies
 from deepopen.analyzers import analyze_manifest
 from deepopen.baseline import apply_baseline
 from deepopen.config import Config, load_config, load_ignore_patterns
 from deepopen.fixers import is_fixable
 from deepopen.gitutil import staged_paths
 from deepopen.models import Finding, SEVERITY_ORDER, Severity, infer_language
+from deepopen.review import analyze_project
 from deepopen.paths import (
     filter_inline_ignores,
     is_placeholder_secret,
@@ -20,6 +22,15 @@ from deepopen.paths import (
 )
 from deepopen.patterns import ALL_PATTERN_RULES, PatternRule
 from deepopen.python_ast import analyze_python
+
+
+def _skip_placeholder_secret(rule_id: str, snippet: str) -> bool:
+    if not (rule_id.startswith("SEC") or rule_id == "CFG006"):
+        return False
+    lowered = snippet.lower()
+    if "${" in snippet or "{{" in snippet or "change_me" in lowered:
+        return True
+    return is_placeholder_secret(snippet)
 
 
 def _severity_included(severity: Severity, minimum: str) -> bool:
@@ -53,7 +64,7 @@ def scan_text(
             snippet = lines[lineno - 1].strip() if 0 < lineno <= len(lines) else match.group(0)
             if rule.skip_comments and line_is_comment(snippet, suffix):
                 continue
-            if rule.rule_id.startswith("SEC") and is_placeholder_secret(snippet):
+            if _skip_placeholder_secret(rule.rule_id, snippet):
                 continue
             findings.append(
                 Finding(
@@ -187,6 +198,14 @@ def scan_path(
         except ValueError:
             display = file_path
         result.findings.extend(scan_text(display, source, config=cfg))
+
+    if root.is_dir():
+        result.findings.extend(
+            item for item in analyze_project(root, cfg) if cfg.allows(item.rule_id, item.category)
+        )
+        result.findings.extend(
+            item for item in analyze_dependencies(root, cfg) if cfg.allows(item.rule_id, item.category)
+        )
 
     result.findings.sort(
         key=lambda item: (SEVERITY_ORDER[item.severity], item.path, item.line, item.rule_id)

@@ -34,6 +34,7 @@ class Config:
     max_files: int = 20_000
     hide_baseline: bool = True
     profile: str = "all"
+    advisories: bool = False
     custom_rules: tuple[PatternRule, ...] = ()
     config_errors: list[str] = field(default_factory=list)
     source: Path | None = None
@@ -123,6 +124,8 @@ def _read_config_file(path: Path) -> Config:
             cfg.profile = profile
         else:
             cfg.config_errors.append(f"未知 profile: {data['profile']}，已回退为 all")
+    if isinstance(data.get("advisories"), bool):
+        cfg.advisories = bool(data["advisories"])
     exclude = data.get("exclude")
     if isinstance(exclude, list):
         cfg.exclude = [str(item) for item in exclude]

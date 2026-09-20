@@ -39,6 +39,10 @@ def analyze_manifest(path: Path, source: str) -> list[Finding]:
         return _go_mod(path, source)
     if name == "cargo.toml":
         return _cargo_toml(path, source)
+    if name == "redis.conf":
+        return _redis_conf(path, source)
+    if name == "settings.py" or name.endswith("settings.py"):
+        return _django_settings(path, source)
     if _is_dotenv_name(name):
         return [_env_committed(path, source)]
     if _is_github_workflow(path) and name.endswith((".yml", ".yaml")):
@@ -194,6 +198,54 @@ def _pyproject(path: Path, source: str) -> list[Finding]:
                 findings.append(_unpinned_python(path, index, stripped))
             if stripped.endswith("]") and not stripped.startswith("["):
                 in_array = False
+    return findings
+
+
+def _redis_conf(path: Path, source: str) -> list[Finding]:
+    if re.search(r"(?im)^requirepass\s+\S+", source):
+        return []
+    first = source.splitlines()[0].strip() if source.strip() else path.name
+    return [
+        _hit(
+            path, 1, first or path.name, "CFG007", "Redis 未设置 requirepass",
+            Severity.HIGH, Category.CONFIG,
+            "redis.conf 里没有有效的 requirepass，未授权客户端可能读写数据。",
+            "设置 requirepass，绑定内网地址，并保持 protected-mode yes。",
+            "CWE-306",
+        )
+    ]
+
+
+def _django_settings(path: Path, source: str) -> list[Finding]:
+    if "INSTALLED_APPS" not in source or "MIDDLEWARE" not in source:
+        return []
+    line = 1
+    for index, raw in enumerate(source.splitlines(), start=1):
+        if "MIDDLEWARE" in raw:
+            line = index
+            break
+    snippet = source.splitlines()[line - 1].strip() if source.splitlines() else path.name
+    findings: list[Finding] = []
+    if "CsrfViewMiddleware" not in source:
+        findings.append(
+            _hit(
+                path, line, snippet, "AUTH010", "Django 中间件缺少 CSRF 保护",
+                Severity.HIGH, Category.SECURITY,
+                "settings 里有 MIDDLEWARE，但没有 CsrfViewMiddleware。",
+                "把 django.middleware.csrf.CsrfViewMiddleware 加回中间件列表。",
+                "CWE-352",
+            )
+        )
+    if "AuthenticationMiddleware" not in source:
+        findings.append(
+            _hit(
+                path, line, snippet, "AUTH011", "Django 中间件缺少认证",
+                Severity.HIGH, Category.SECURITY,
+                "settings 里有 MIDDLEWARE，但没有 AuthenticationMiddleware。",
+                "把 django.contrib.auth.middleware.AuthenticationMiddleware 加回中间件列表。",
+                "CWE-306",
+            )
+        )
     return findings
 
 

@@ -30,6 +30,33 @@ def _const_str(node: ast.AST) -> str | None:
     return None
 
 
+_PUBLIC_VIEWS = frozenset({
+    "health", "healthz", "ready", "readiness", "liveness", "live", "ping",
+    "login", "logout", "signin", "signout", "index", "home", "favicon",
+    "static", "robots", "openapi", "docs", "redoc", "swagger", "metrics",
+})
+_ROUTE_LEAVES = frozenset({
+    "route", "get", "post", "put", "patch", "delete",
+    "api_view", "api_route", "action", "websocket", "endpoint",
+})
+_AUTH_NEEDLES = (
+    "login_required", "permission", "jwt", "auth_required", "authorized",
+    "requires_auth", "roles_required", "roles_accepted", "user_passes",
+    "csrf_protect", "authenticated", "token_required", "admin_required",
+    "staff_member", "permission_classes", "authentication_classes",
+    "require_http_auth", "has_perm", "oauth",
+)
+
+
+def _is_http_route(name: str) -> bool:
+    leaf = name.rsplit(".", 1)[-1]
+    return leaf in _ROUTE_LEAVES
+
+
+def _looks_like_auth(name: str) -> bool:
+    return any(marker in name for marker in _AUTH_NEEDLES)
+
+
 class _Visitor(ast.NodeVisitor):
     def __init__(self, path: Path, source: str) -> None:
         self.path = str(path)
@@ -401,13 +428,49 @@ class _Visitor(ast.NodeVisitor):
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         self._check_mutable_defaults(node)
         self._flag_unreachable(node.body)
+        self._check_route_auth(node)
         self.generic_visit(node)
 
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
         self._check_mutable_defaults(node)
         self._flag_unreachable(node.body)
         self._check_blocking_in_async(node)
+        self._check_route_auth(node)
         self.generic_visit(node)
+
+    def _decorator_name(self, node: ast.AST) -> str:
+        if isinstance(node, ast.Call):
+            return _call_name(node.func)
+        return _call_name(node)
+
+    def _has_auth_dependency(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+        defaults = [item for item in (*node.args.defaults, *node.args.kw_defaults) if item is not None]
+        for default in defaults:
+            for child in ast.walk(default):
+                if not isinstance(child, ast.Call):
+                    continue
+                name = _call_name(child.func).lower()
+                if name.endswith("depends") or name.endswith("security") or "depends" in name:
+                    return True
+        return False
+
+    def _check_route_auth(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        name = node.name.lower()
+        if name in _PUBLIC_VIEWS or name.startswith("test"):
+            return
+        names = [self._decorator_name(item).lower() for item in node.decorator_list]
+        if not any(_is_http_route(item) for item in names):
+            return
+        if any(_looks_like_auth(item) for item in names):
+            return
+        if self._has_auth_dependency(node):
+            return
+        self._add(
+            node, "AST069", "路由处理函数未见鉴权", Severity.MEDIUM, Category.SECURITY,
+            "HTTP 路由装饰器旁边没有 login_required / permission / Depends 一类标记。",
+            "给改状态的接口补上登录或权限检查；公开接口请改成明确的健康检查或登录页命名。",
+            "CWE-306",
+        )
 
     def visit_Compare(self, node: ast.Compare) -> None:
         comparators = [node.left, *node.comparators]

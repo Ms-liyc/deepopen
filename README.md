@@ -6,33 +6,30 @@
 
 扫描**你自己的源码**，找出常见缺陷、密钥泄露和不安全写法，并给出加固建议。
 
-### ✨ 当前版本 0.4.1
+### ✨ 当前版本 0.5.0
 
-Python 3.10+ · 仅标准库 · 约 239 条规则
+Python 3.10+ · 仅标准库 · 约 258 条规则
 
 #### 🌟 项目亮点
 
 🎨 **多语言规则** — Python、JS/TS、Java、Go、PHP、C/C++、Rust 等  
 🔒 **防守检查** — 只给加固建议，不生成攻击步骤、PoC 或利用代码  
+🛡️ **鉴权与配置启发式** — CSRF、匿名放行、请求体改价格/角色、运行时明文口令  
+📦 **依赖公告** — 离线识别已知投毒包名；可选联网查询 OSV  
+🧪 **测试缺口** — 缺少测试文件、测试没有断言  
 🖥️ **本机控制台** — 只监听 `127.0.0.1`，可导出 Markdown 修改方案  
 📋 **工程接入** — 基线、钩子、GitHub Actions、自定义规则
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Version](https://img.shields.io/badge/version-0.4.1-3ee0b2)](https://github.com/Ms-liyc/deepopen)
+[![Version](https://img.shields.io/badge/version-0.5.0-3ee0b2)](https://github.com/Ms-liyc/deepopen)
 [![Stdlib](https://img.shields.io/badge/deps-stdlib%20only-success)](https://github.com/Ms-liyc/deepopen)
-[![Rules](https://img.shields.io/badge/rules-239-orange)](https://github.com/Ms-liyc/deepopen)
+[![Rules](https://img.shields.io/badge/rules-258-orange)](https://github.com/Ms-liyc/deepopen)
 [![Stars](https://img.shields.io/github/stars/Ms-liyc/deepopen?style=flat)](https://github.com/Ms-liyc/deepopen/stargazers)
 [![Issues](https://img.shields.io/github/issues/Ms-liyc/deepopen)](https://github.com/Ms-liyc/deepopen/issues)
 
 它做的是防守检查，不是渗透测试。请在自己的仓库上运行。
 
-#### ⚠️ 使用注意
-
-❌ 不能发现鉴权设计、业务逻辑、运行时配置问题  
-❌ 不能替代依赖 CVE 扫描（请另外使用 pip-audit / npm audit 等）  
-❌ 不能替代代码评审和测试
-
-> 扫描结果也不能证明「没有漏洞」。
+> ⚠️ **注意：** 扫描结果不能证明「没有漏洞」。鉴权、CVE、测试相关检查都是启发式或可选查询，不能替代设计评审、pip-audit / npm audit 和真正的测试。
 
 </div>
 
@@ -40,19 +37,30 @@ Python 3.10+ · 仅标准库 · 约 239 条规则
 
 - 🌐 **多语言规则**：Python（AST + 正则）、JavaScript/TypeScript、Java/Kotlin、Go、PHP、Ruby、C#、C/C++、Rust、SQL、HTML、Docker/K8s、Terraform、Shell
 - 🔑 **密钥检测**：私钥、云厂商密钥、常见令牌形态、连接串口令、误提交的 `.env`
+- 🛡️ **鉴权 / 业务 / 配置启发式**：关闭 CSRF、匿名放行、请求体写入价格或管理员标记、按请求 ID 取对象、路由未见鉴权、Django 中间件缺失、Redis 无口令、配置关闭 TLS、配置明文口令
+- 📦 **依赖公告**：离线识别少数已知投毒/滥用包名；`--advisories` 可选查询 [OSV](https://osv.dev) 公开公告
+- 🧪 **测试缺口**：仓库没有测试文件，或测试里看不到断言
 - 🐛 **缺陷检测**：裸 except、可变默认参数、资源泄漏、死代码、超时缺失等
-- 📦 **清单分析**：`pyproject.toml` / `go.mod` / `Cargo.toml` 未钉版本，GitHub Actions `write-all`
+- 📋 **清单分析**：`pyproject.toml` / `go.mod` / `Cargo.toml` 未钉版本，GitHub Actions `write-all`
 - 🖥️ **本地控制台**：只监听 `127.0.0.1`，可筛选、看源码上下文、预览修复，并导出 Markdown 修改方案
 - 📄 **报告**：终端 / JSON / HTML / Markdown / SARIF
 - 🛠️ **基线与修复**：忽略已接受命中；`deepopen fix` 只改 `== None`、裸 `except` 这类质量问题
 - ⚙️ **工程接入**：`deepopen.toml`、行内忽略、自定义规则、Git pre-commit、GitHub Actions
 
+## 这三项现在会检查什么
+
+| 原先写「不能」的点 | 现在会做的检查 | 仍然做不到 |
+| --- | --- | --- |
+| 鉴权设计、业务逻辑、运行时配置 | 源码和配置文件里的常见危险写法（见 AUTH / AST069 / CFG 规则） | 还原真实鉴权模型、越权路径和线上实际配置 |
+| 依赖 CVE 扫描 | 已知投毒包名；可选 `--advisories` 查 OSV | 完整、持续的 CVE 审计（请继续用 pip-audit / npm audit） |
+| 代码评审和测试 | 发现仓库缺测试、测试没有断言 | 代替人读代码，或证明测试足够 |
+
 ## 它不能代替什么
 
 - ❌ 不能证明「没有漏洞」
-- ❌ 不能发现鉴权设计、业务逻辑、运行时配置问题
-- ❌ 不能替代依赖 CVE 扫描（请另外使用 pip-audit / npm audit 等）
-- ❌ 不能替代代码评审和测试
+- ❌ 不能替代完整的鉴权/业务设计评审，以及生产环境配置审计
+- ❌ 不能替代 pip-audit / npm audit 这类持续 CVE 扫描
+- ❌ 不能替代人工代码评审，也不能代替你真正去写测试
 
 ## 安装
 
@@ -113,6 +121,7 @@ http://127.0.0.1:8765/?path=.&autoscan=1
 ```bash
 python -m deepopen scan . --fail-on high
 python -m deepopen scan . --profile security
+python -m deepopen scan . --advisories
 python -m deepopen scan . --staged
 python -m deepopen scan . -o reports/report.html
 python -m deepopen scan . -o reports/report.sarif --format text
@@ -122,6 +131,7 @@ python -m deepopen scan . --checklist
 
 - `--fail-on`：`critical` / `high`（默认） / `medium` / `low` / `info` / `never`
 - `--profile`：`all`（默认） / `security` / `bug` / `secret`
+- `--advisories`：联网查询 OSV 公开依赖公告（默认关闭；完整 CVE 扫描仍请用 pip-audit / npm audit）
 - `--staged`：只检查 Git 已暂存文件
 - 默认出现 `high` 或 `critical` 时退出码为 1，方便接 CI；`--fail-on never` 只出报告不失败
 
@@ -151,6 +161,7 @@ profile = "all"
 exclude = ["node_modules", "vendor"]
 disable_rules = ["WEB001"]
 hide_baseline = true
+# advisories = false
 
 # [[rules]]
 # id = "TEAM001"
@@ -226,9 +237,11 @@ Pre-commit 钩子对暂存文件做同样检查。
 
 | 位置 | 内容 |
 | --- | --- |
-| `deepopen/patterns/` | 各语言正则规则 |
-| `deepopen/python_ast.py` | Python AST 检查 |
-| `deepopen/analyzers.py` | Dockerfile、依赖清单、`.env`、Actions 权限 |
+| `deepopen/patterns/` | 各语言正则规则（含 AUTH / CFG 启发式） |
+| `deepopen/python_ast.py` | Python AST 检查（含路由未见鉴权） |
+| `deepopen/analyzers.py` | Dockerfile、依赖清单、`.env`、Actions 权限、Django settings、redis.conf |
+| `deepopen/advisories.py` | 已知投毒包名；可选 OSV 查询 |
+| `deepopen/review.py` | 测试文件缺口 |
 | `deepopen.toml` 的 `[[rules]]` | 仓库自己的规则 |
 
 查看规则：

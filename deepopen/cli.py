@@ -64,6 +64,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="扫描配置档：all / security / bug / secret",
     )
+    scan.add_argument(
+        "--advisories",
+        action="store_true",
+        help="联网查询 OSV 公开依赖公告（默认关闭，不能替代 pip-audit / npm audit）",
+    )
 
     serve = sub.add_parser("serve", help="打开本地 Web 控制台（仅 127.0.0.1）")
     serve.add_argument("path", nargs="?", default=".", help="控制台默认扫描目录")
@@ -118,6 +123,8 @@ def _cmd_scan(args: argparse.Namespace) -> int:
     cfg = load_config(target, explicit=args.config)
     if args.profile:
         cfg.profile = args.profile
+    if args.advisories:
+        cfg.advisories = True
     fail_on = args.fail_on or cfg.fail_on
     result = scan_path(
         target,

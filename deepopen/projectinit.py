@@ -11,6 +11,7 @@ profile = "all"
 exclude = ["node_modules", "dist", "build", "vendor"]
 disable_rules = []
 hide_baseline = true
+# advisories = false  # true 时联网查询 OSV 公开公告（不能替代 pip-audit / npm audit）
 
 # 自定义规则（id 必须以 CUSTOM / TEAM / ORG / LOCAL 开头）
 # [[rules]]

@@ -152,6 +152,7 @@
       <button id="preview-fix" class="ghost">预览修复</button>
       <label class="hint"><input id="staged" type="checkbox"> 仅 Git 暂存文件</label>
       <label class="hint"><input id="show-base" type="checkbox"> 显示基线已接受项</label>
+      <label class="hint"><input id="advisories" type="checkbox"> 查询 OSV 依赖公告（需联网）</label>
       <p class="hint" id="scan-meta">只监听本机 127.0.0.1。检查的是源码模式，不是渗透测试。</p>
     </aside>
     <main>
@@ -307,7 +308,8 @@
             path: $("path").value,
             staged: $("staged").checked,
             show_baseline: $("show-base").checked,
-            profile: $("profile").value
+            profile: $("profile").value,
+            advisories: $("advisories").checked
           })
         });
         const data = await res.json();
@@ -351,6 +353,7 @@
           staged: $("staged").checked,
           show_baseline: $("show-base").checked,
           profile: $("profile").value,
+          advisories: $("advisories").checked,
           format
         })
       });

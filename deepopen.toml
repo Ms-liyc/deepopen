@@ -4,3 +4,4 @@ profile = "all"
 exclude = ["tests", "reports", "deepopen/web"]
 disable_rules = []
 hide_baseline = true
+# advisories = false  # true 时联网查询 OSV，不能替代 pip-audit / npm audit

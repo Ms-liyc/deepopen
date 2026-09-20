@@ -192,6 +192,8 @@ class DeepOpenHandler(BaseHTTPRequestHandler):
         profile = str(payload.get("profile") or "").strip().lower()
         if profile in PROFILES:
             cfg.profile = profile
+        if payload.get("advisories"):
+            cfg.advisories = True
         result = scan_path(
             path,
             config=cfg,
