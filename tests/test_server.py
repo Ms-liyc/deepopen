@@ -30,6 +30,11 @@ def test_server_scan_roundtrip(tmp_path: Path) -> None:
             home = resp.read().decode("utf-8")
         assert "DeepOpen" in home
         assert "导出修改方案" in home
+        assert "progress-wrap" in home
+        assert "/static/logo.jpg" in home
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/static/logo.jpg", timeout=5) as resp:
+            assert resp.headers.get_content_type() == "image/jpeg"
+            assert resp.read()[:3] == b"\xff\xd8\xff"
         req = urllib.request.Request(
             f"http://127.0.0.1:{port}/api/scan",
             data=json.dumps({"path": str(sample)}).encode("utf-8"),
@@ -40,6 +45,18 @@ def test_server_scan_roundtrip(tmp_path: Path) -> None:
             payload = json.loads(resp.read().decode("utf-8"))
         assert payload["files_scanned"] == 1
         assert payload["findings"] == []
+        stream_req = urllib.request.Request(
+            f"http://127.0.0.1:{port}/api/scan/stream",
+            data=json.dumps({"path": str(sample)}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(stream_req, timeout=10) as resp:
+            rows = [json.loads(line) for line in resp.read().decode("utf-8").splitlines() if line.strip()]
+        assert rows[0]["event"] == "progress"
+        assert rows[-1]["event"] == "done"
+        assert rows[-1]["result"]["files_scanned"] == 1
+        assert any(row.get("event") == "progress" and "scanned" in row and "findings" in row for row in rows)
         md_req = urllib.request.Request(
             f"http://127.0.0.1:{port}/api/scan",
             data=json.dumps({"path": str(sample), "format": "md"}).encode("utf-8"),

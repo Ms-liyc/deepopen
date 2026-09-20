@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="deepopen/web/logo.jpg" width="168" alt="DeepOpen 屿盾 logo">
+
 # DeepOpen
 
 **本地静态检查工具**

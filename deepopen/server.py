@@ -14,7 +14,7 @@ from deepopen.checklist import CHECKLIST, CHECKLIST_SECTIONS
 from deepopen.config import PROFILES, load_config
 from deepopen.fixers import apply_fixes
 from deepopen.report import render_html, render_json, render_markdown, render_sarif
-from deepopen.scanner import scan_path
+from deepopen.scanner import ScanProgress, scan_path
 from deepopen.version import __version__
 
 WEB_DIR = Path(__file__).resolve().parent / "web"
@@ -92,6 +92,11 @@ class DeepOpenHandler(BaseHTTPRequestHandler):
             index = WEB_DIR / "index.html"
             self._send(200, index.read_bytes(), "text/html; charset=utf-8")
             return
+        if route in {"/favicon.ico", "/static/logo.jpg", "/static/logo.png"}:
+            logo = WEB_DIR / "logo.jpg"
+            if logo.is_file():
+                self._send(200, logo.read_bytes(), "image/jpeg")
+                return
         if route == "/api/meta":
             self._send_json(
                 200,
@@ -157,6 +162,9 @@ class DeepOpenHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/scan":
             self._handle_scan(payload)
             return
+        if parsed.path == "/api/scan/stream":
+            self._handle_scan_stream(payload)
+            return
         if parsed.path == "/api/baseline":
             path = self._resolve_scan_path(str(payload.get("path") or self.default_path))
             if path is None:
@@ -220,6 +228,49 @@ class DeepOpenHandler(BaseHTTPRequestHandler):
             )
             return
         self._send(200, render_json(result).encode("utf-8"), "application/json; charset=utf-8")
+
+    def _handle_scan_stream(self, payload: dict[str, object]) -> None:
+        target = str(payload.get("path") or self.default_path)
+        staged = bool(payload.get("staged"))
+        show_baseline = bool(payload.get("show_baseline"))
+        path = self._resolve_scan_path(target)
+        if path is None:
+            self._send_json(400, {"error": f"路径不存在: {target}"})
+            return
+        DeepOpenHandler.last_scan_root = str(path)
+        cfg = load_config(path)
+        profile = str(payload.get("profile") or "").strip().lower()
+        if profile in PROFILES:
+            cfg.profile = profile
+        if payload.get("advisories"):
+            cfg.advisories = True
+        self.send_response(200)
+        self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Accel-Buffering", "no")
+        self.end_headers()
+
+        def on_progress(progress: ScanProgress) -> None:
+            self._write_ndjson(progress.to_dict())
+
+        try:
+            result = scan_path(
+                path,
+                config=cfg,
+                staged=staged,
+                hide_baseline=not show_baseline,
+                on_progress=on_progress,
+            )
+            self._write_ndjson({"event": "done", "result": json.loads(render_json(result))})
+        except Exception as exc:
+            self._write_ndjson({"event": "error", "error": str(exc) or "扫描失败"})
+
+    def _write_ndjson(self, payload: object) -> None:
+        try:
+            self.wfile.write((json.dumps(payload, ensure_ascii=False) + "\n").encode("utf-8"))
+            self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            return
 
 
 def serve(host: str, port: int, default_path: str) -> ThreadingHTTPServer:

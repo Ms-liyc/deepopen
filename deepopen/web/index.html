@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DeepOpen 代码检查台</title>
+  <link rel="icon" href="/static/logo.jpg" type="image/jpeg">
   <style>
     :root {
       --bg: #08111d;
@@ -39,10 +40,9 @@
     }
     .brand { display: flex; gap: 12px; align-items: center; }
     .mark {
-      width: 36px; height: 36px; border-radius: 10px;
-      background: linear-gradient(135deg, var(--mint), #1a8f8a);
-      color: #062019; display: grid; place-items: center;
-      font-weight: 800; font-family: var(--mono);
+      width: 48px; height: 48px; border-radius: 12px;
+      object-fit: cover; flex-shrink: 0;
+      background: #08111d; border: 1px solid var(--line);
     }
     .brand h1 { font-size: 16px; margin: 0; letter-spacing: .04em; }
     .brand p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
@@ -63,6 +63,19 @@
     .tabs button { flex: 1; font-size: 12px; }
     .tabs button.active { background: var(--panel-2); color: var(--mint); border: 1px solid var(--mint); }
     .hint { color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .progress-wrap {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+      padding: 14px 16px; margin-bottom: 16px;
+    }
+    .progress-head { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; margin-bottom: 8px; }
+    .progress-head b { color: var(--mint); font-variant-numeric: tabular-nums; }
+    .progress-track { height: 10px; background: #08111d; border-radius: 999px; overflow: hidden; border: 1px solid var(--line); }
+    .progress-bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--mint), var(--sky));
+      transition: width .12s ease;
+    }
+    .progress-meta { margin-top: 8px; color: var(--muted); font-size: 12px; word-break: break-all; }
     main { padding: 22px 26px 40px; min-width: 0; }
     .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
     .stat {
@@ -117,7 +130,7 @@
   <div class="app">
     <aside>
       <div class="brand">
-        <div class="mark">DO</div>
+        <img class="mark" src="/static/logo.jpg" width="48" height="48" alt="屿">
         <div>
           <h1>DeepOpen</h1>
           <p id="ver">本地代码检查台</p>
@@ -157,6 +170,14 @@
     </aside>
     <main>
       <section id="view-scan">
+        <div class="progress-wrap" id="progress-wrap" hidden>
+          <div class="progress-head">
+            <span id="progress-label">准备扫描…</span>
+            <b id="progress-count">0/0</b>
+          </div>
+          <div class="progress-track"><div class="progress-bar" id="progress-bar"></div></div>
+          <div class="progress-meta" id="progress-meta">已发现 0 个问题</div>
+        </div>
         <div class="stats" id="stats"></div>
         <div class="toolbar">
           <input id="q" type="text" placeholder="过滤规则、路径、说明" style="max-width:320px">
@@ -297,36 +318,117 @@
       }[ch]));
     }
 
+    function phaseLabel(phase) {
+      return ({
+        listing: "正在列出文件",
+        scan: "正在扫描",
+        review: "正在检查测试缺口",
+        advisories: "正在检查依赖",
+        done: "扫描完成"
+      })[phase] || "正在扫描";
+    }
+
+    function showProgress(msg) {
+      const wrap = $("progress-wrap");
+      wrap.hidden = false;
+      const total = msg.total || 0;
+      const scanned = msg.scanned || 0;
+      const findings = msg.findings || 0;
+      const pct = msg.pct || 0;
+      $("progress-label").textContent = phaseLabel(msg.phase);
+      $("progress-count").textContent = scanned + "/" + total + "  " + pct + "%";
+      $("progress-bar").style.width = pct + "%";
+      const file = msg.path ? " · " + msg.path : "";
+      $("progress-meta").textContent = "已发现 " + findings + " 个问题" + file;
+      $("scan-meta").textContent = "文件 " + scanned + "/" + total + " · 已发现 " + findings + " 个问题";
+      $("run").textContent = msg.phase === "done" ? "开始检查" : "扫描中 " + scanned + "/" + total;
+    }
+
+    async function readScanStream(res) {
+      if (!res.body || !res.body.getReader) return null;
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let result = null;
+      while (true) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        buf += decoder.decode(chunk.value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const msg = JSON.parse(line);
+          if (msg.event === "progress") showProgress(msg);
+          else if (msg.event === "done") result = msg.result;
+          else if (msg.event === "error") throw new Error(msg.error || "扫描失败");
+        }
+      }
+      if (buf.trim()) {
+        const msg = JSON.parse(buf);
+        if (msg.event === "progress") showProgress(msg);
+        else if (msg.event === "done") result = msg.result;
+        else if (msg.event === "error") throw new Error(msg.error || "扫描失败");
+      }
+      return result;
+    }
+
+    function applyScanResult(data) {
+      state.last = data;
+      state.findings = data.findings || [];
+      state.selected = 0;
+      renderStats(data.counts || {});
+      const langs = data.languages ? Object.entries(data.languages).map(([k,v]) => k + "=" + v).join(" · ") : "";
+      const total = data.files_total || data.files_scanned || 0;
+      $("scan-meta").textContent = `文件 ${data.files_scanned || 0}/${total} · 命中 ${data.finding_count || 0} · ${data.duration_ms || 0}ms` +
+        (data.profile ? ` · ${data.profile}` : "") +
+        (data.baselined_count ? ` · 基线忽略 ${data.baselined_count}` : "") +
+        (langs ? ` · ${langs}` : "");
+      showProgress({
+        phase: "done",
+        total,
+        scanned: total,
+        findings: data.finding_count || 0,
+        pct: 100
+      });
+      renderList();
+      if (!state.findings.length) {
+        $("detail").innerHTML = "<h2>未发现规则命中</h2><p>这不代表没有缺陷，只说明当前规则没有匹配。</p>";
+      }
+    }
+
     $("run").onclick = async () => {
       $("run").disabled = true;
       $("run").textContent = "检查中…";
+      showProgress({ phase: "listing", total: 0, scanned: 0, findings: 0, pct: 0 });
+      const body = {
+        path: $("path").value,
+        staged: $("staged").checked,
+        show_baseline: $("show-base").checked,
+        profile: $("profile").value,
+        advisories: $("advisories").checked
+      };
       try {
-        const res = await fetch("/api/scan", {
+        const res = await fetch("/api/scan/stream", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            path: $("path").value,
-            staged: $("staged").checked,
-            show_baseline: $("show-base").checked,
-            profile: $("profile").value,
-            advisories: $("advisories").checked
-          })
+          body: JSON.stringify(body)
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "扫描失败");
-        state.last = data;
-        state.findings = data.findings || [];
-        state.selected = 0;
-        renderStats(data.counts || {});
-        const langs = data.languages ? Object.entries(data.languages).map(([k,v]) => k + "=" + v).join(" · ") : "";
-        $("scan-meta").textContent = `文件 ${data.files_scanned || 0} · 命中 ${data.finding_count || 0} · ${data.duration_ms || 0}ms` +
-          (data.profile ? ` · ${data.profile}` : "") +
-          (data.baselined_count ? ` · 基线忽略 ${data.baselined_count}` : "") +
-          (langs ? ` · ${langs}` : "");
-        renderList();
-        if (!state.findings.length) {
-          $("detail").innerHTML = "<h2>未发现规则命中</h2><p>这不代表没有缺陷，只说明当前规则没有匹配。</p>";
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({ error: "扫描失败" }));
+          throw new Error(data.error || "扫描失败");
         }
+        let data = await readScanStream(res);
+        if (!data) {
+          const fallback = await fetch("/api/scan", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+          });
+          data = await fallback.json();
+          if (!fallback.ok) throw new Error(data.error || "扫描失败");
+        }
+        applyScanResult(data);
       } catch (err) {
         $("detail").innerHTML = `<h2>无法完成扫描</h2><p>${esc(err.message)}</p>`;
       } finally {

@@ -32,7 +32,7 @@ SARIF_LEVEL = {
 def render_text(result: ScanResult, color: bool = True) -> str:
     lines: list[str] = []
     lines.append(f"扫描目录: {result.root}")
-    lines.append(f"已检查文件: {result.files_scanned}  耗时: {result.duration_ms}ms")
+    lines.append(f"已检查文件: {result.files_scanned}/{result.files_total or result.files_scanned}  耗时: {result.duration_ms}ms")
     if result.baselined_count:
         lines.append(f"基线已忽略: {result.baselined_count}")
     if result.languages:

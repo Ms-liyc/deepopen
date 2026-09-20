@@ -6,6 +6,7 @@ import argparse
 import json
 import sys
 import webbrowser
+from collections.abc import Callable
 from pathlib import Path
 
 from deepopen.baseline import save_baseline
@@ -23,7 +24,7 @@ from deepopen.report import (
     render_text,
     write_report,
 )
-from deepopen.scanner import scan_path
+from deepopen.scanner import ScanProgress, format_progress_line, scan_path
 from deepopen.version import __version__
 
 COMMANDS = {"scan", "serve", "init", "rules", "hook", "checklist", "fix", "explain", "baseline"}
@@ -126,11 +127,13 @@ def _cmd_scan(args: argparse.Namespace) -> int:
     if args.advisories:
         cfg.advisories = True
     fail_on = args.fail_on or cfg.fail_on
+    progress = _cli_progress(sys.stderr) if sys.stderr.isatty() else None
     result = scan_path(
         target,
         config=cfg,
         staged=args.staged,
         hide_baseline=not args.show_baseline,
+        on_progress=progress,
     )
     if args.save_baseline:
         path = save_baseline(target, result.findings)
@@ -148,6 +151,26 @@ def _cmd_scan(args: argparse.Namespace) -> int:
         write_report(result, args.output)
         print(f"报告已写入: {args.output}")
     return exit_code(result, fail_on)
+
+
+def _cli_progress(stream) -> Callable[[ScanProgress], None]:
+    last = ""
+
+    def emit(progress: ScanProgress) -> None:
+        nonlocal last
+        line = "\r" + format_progress_line(progress)
+        pad = max(0, len(last) - len(line))
+        text = line + (" " * pad)
+        try:
+            stream.write(text)
+            if progress.phase == "done":
+                stream.write("\n")
+            stream.flush()
+        except OSError:
+            return
+        last = line
+
+    return emit
 
 
 def _cmd_serve(args: argparse.Namespace) -> int:

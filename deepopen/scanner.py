@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -106,10 +107,62 @@ def _dedupe(findings: list[Finding]) -> list[Finding]:
     return list(preferred.values())
 
 
+@dataclass(frozen=True)
+class ScanProgress:
+    total: int
+    scanned: int
+    findings: int
+    path: str = ""
+    phase: str = "scan"
+
+    @property
+    def pct(self) -> int:
+        if self.phase == "done":
+            return 100
+        if self.phase == "listing" or self.total <= 0:
+            return 0
+        if self.phase in {"review", "advisories"}:
+            return min(99, int(self.scanned * 100 / self.total) if self.total else 99)
+        return min(99, int(self.scanned * 100 / self.total))
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "event": "progress",
+            "total": self.total,
+            "scanned": self.scanned,
+            "findings": self.findings,
+            "path": self.path,
+            "phase": self.phase,
+            "pct": self.pct,
+        }
+
+
+def format_progress_line(progress: ScanProgress, width: int = 24) -> str:
+    filled = 0 if progress.total <= 0 else min(width, int(width * progress.pct / 100))
+    bar = "#" * filled + "-" * (width - filled)
+    name = str(progress.path).replace("\\", "/")
+    if len(name) > 32:
+        name = "..." + name[-29:]
+    labels = {
+        "listing": "列出文件",
+        "scan": "扫描中",
+        "review": "检查测试",
+        "advisories": "检查依赖",
+        "done": "扫描完成",
+    }
+    label = labels.get(progress.phase, "扫描中")
+    extra = f"  {name}" if name else ""
+    return (
+        f"{label} [{bar}] {progress.scanned}/{progress.total}  {progress.pct}%"
+        f"  已发现 {progress.findings}{extra}"
+    )
+
+
 @dataclass
 class ScanResult:
     root: Path
     files_scanned: int = 0
+    files_total: int = 0
     findings: list[Finding] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     duration_ms: int = 0
@@ -137,6 +190,7 @@ class ScanResult:
         return {
             "root": str(self.root),
             "files_scanned": self.files_scanned,
+            "files_total": self.files_total,
             "finding_count": len(self.findings),
             "counts": self.counts_by_severity,
             "categories": self.counts_by_category,
@@ -155,6 +209,7 @@ def scan_path(
     config: Config | None = None,
     staged: bool = False,
     hide_baseline: bool | None = None,
+    on_progress: Callable[[ScanProgress], None] | None = None,
 ) -> ScanResult:
     root = root.resolve()
     cfg = config or load_config(root)
@@ -162,12 +217,33 @@ def scan_path(
     result = ScanResult(root=root, profile=cfg.profile)
     exclude = load_ignore_patterns(root, cfg.exclude)
     result.errors.extend(cfg.config_errors)
+    last_emit = 0.0
 
+    def emit(scanned: int, path: str = "", phase: str = "scan", force: bool = False) -> None:
+        nonlocal last_emit
+        if on_progress is None:
+            return
+        now = time.perf_counter()
+        if not force and phase == "scan" and scanned not in {0, result.files_total} and now - last_emit < 0.04:
+            return
+        last_emit = now
+        on_progress(
+            ScanProgress(
+                total=result.files_total,
+                scanned=scanned,
+                findings=len(result.findings),
+                path=path,
+                phase=phase,
+            )
+        )
+
+    emit(0, phase="listing", force=True)
     if staged:
         files, err = staged_paths(root)
         if err:
             result.errors.append(err)
             result.duration_ms = int((time.perf_counter() - started) * 1000)
+            emit(0, phase="done", force=True)
             return result
     else:
         files, truncated_msg = iter_files(root, exclude=exclude, max_files=cfg.max_files)
@@ -175,13 +251,23 @@ def scan_path(
             result.truncated = True
             result.errors.append(truncated_msg)
 
+    result.files_total = len(files)
+    emit(0, phase="scan", force=True)
+    processed = 0
     for file_path in files:
+        processed += 1
+        try:
+            display = file_path.relative_to(root if root.is_dir() else root.parent)
+        except ValueError:
+            display = file_path
         try:
             data = file_path.read_bytes()
         except OSError as exc:
             result.errors.append(f"{file_path}: {exc}")
+            emit(processed, str(display), force=processed >= result.files_total)
             continue
         if len(data) > cfg.max_file_bytes or b"\x00" in data[:4096]:
+            emit(processed, str(display), force=processed >= result.files_total)
             continue
         try:
             source = data.decode("utf-8")
@@ -189,20 +275,20 @@ def scan_path(
             try:
                 source = data.decode("gbk")
             except UnicodeDecodeError:
+                emit(processed, str(display), force=processed >= result.files_total)
                 continue
         result.files_scanned += 1
         lang = infer_language(str(file_path))
         result.languages[lang] = result.languages.get(lang, 0) + 1
-        try:
-            display = file_path.relative_to(root if root.is_dir() else root.parent)
-        except ValueError:
-            display = file_path
         result.findings.extend(scan_text(display, source, config=cfg))
+        emit(processed, str(display), force=processed >= result.files_total)
 
     if root.is_dir():
+        emit(processed, phase="review", force=True)
         result.findings.extend(
             item for item in analyze_project(root, cfg) if cfg.allows(item.rule_id, item.category)
         )
+        emit(processed, phase="advisories", force=True)
         result.findings.extend(
             item for item in analyze_dependencies(root, cfg) if cfg.allows(item.rule_id, item.category)
         )
@@ -213,4 +299,5 @@ def scan_path(
     hide = cfg.hide_baseline if hide_baseline is None else hide_baseline
     result.findings, result.baselined_count = apply_baseline(result.findings, root, hide=hide)
     result.duration_ms = int((time.perf_counter() - started) * 1000)
+    emit(processed, phase="done", force=True)
     return result
