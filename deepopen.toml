@@ -1,6 +1,6 @@
 fail_on = "high"
 min_severity = "info"
 profile = "all"
-exclude = ["examples", "tests", "reports", "deepopen/web"]
+exclude = ["tests", "reports", "deepopen/web"]
 disable_rules = []
 hide_baseline = true

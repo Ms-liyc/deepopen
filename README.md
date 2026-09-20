@@ -6,28 +6,6 @@
 
 当前版本 **0.4.0** · Python 3.10+ · 仅标准库 · 约 195 条规则
 
-## 运行截图
-
-下面几张图来自对本仓库 `examples/` 的真实扫描（这些示例文件只用来演示命中，不要拷进业务代码）。
-
-**终端扫描** — `python -m deepopen scan examples`
-
-<p><img src="./docs/screenshots/cli.png" alt="终端扫描 examples" width="920"></p>
-
-**本地控制台** — `python -m deepopen serve examples`，浏览器打开 http://127.0.0.1:8765/
-
-<p><img src="./docs/screenshots/console.png" alt="本地 Web 控制台" width="920"></p>
-
-**HTML 报告** — `python -m deepopen scan examples -o reports/report.html`
-
-<p><img src="./docs/screenshots/report.png" alt="HTML 检查报告" width="920"></p>
-
-**加固清单** — 控制台「清单」页，或 `python -m deepopen checklist`
-
-<p><img src="./docs/screenshots/checklist.png" alt="加固清单" width="920"></p>
-
-截图可用 `python scripts/capture_readme.py` 重新生成（需本机安装 Edge 或 Chrome）。
-
 ## 它能做什么
 
 - **多语言规则**：Python（AST + 正则）、JavaScript/TypeScript、Java/Kotlin、Go、PHP、Ruby、C#、C/C++、Rust、SQL、HTML、Docker/K8s、Terraform、Shell
@@ -71,22 +49,19 @@ python -m deepopen scan .
 ## 30 秒上手
 
 ```bash
-# 1. 看示例会命中哪些规则（应能看到 high/medium）
-python -m deepopen scan examples
-
-# 2. 检查当前仓库，high 及以上失败（适合 CI）
+# 1. 检查当前仓库，high 及以上失败（适合 CI）
 python -m deepopen scan . --fail-on high
 
-# 3. 打开本机控制台
-python -m deepopen serve examples
+# 2. 打开本机控制台
+python -m deepopen serve .
 ```
 
-浏览器访问 http://127.0.0.1:8765/ ，路径填 `examples`，点「开始检查」。控制台只绑定回环地址，不会对外网开放。
+浏览器访问 http://127.0.0.1:8765/ ，路径填要扫描的目录，点「开始检查」。控制台只绑定回环地址，不会对外网开放。
 
 演示链接也可以带参数自动开扫：
 
 ```
-http://127.0.0.1:8765/?path=examples&autoscan=1
+http://127.0.0.1:8765/?path=.&autoscan=1
 ```
 
 ## 命令一览
@@ -190,8 +165,8 @@ python -m deepopen baseline show .
 质量问题可自动改写（**安全类命中不会改文件**）：
 
 ```bash
-python -m deepopen fix examples          # 只预览
-python -m deepopen fix examples --apply  # 写回
+python -m deepopen fix .          # 只预览
+python -m deepopen fix . --apply  # 写回
 ```
 
 目前支持：`== None` → `is None`，裸 `except:` → `except Exception:`。
@@ -243,4 +218,4 @@ python -m pytest
 python -m deepopen scan . --fail-on high
 ```
 
-`examples/` 用来验证规则能命中；本仓库自检（`scan .`）应保持干净。
+本仓库自检（`scan .`）应保持干净。规则命中请用 `tests/` 里的片段验证。

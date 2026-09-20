@@ -7,6 +7,4 @@ venv/
 dist/
 build/
 reports/
-docs/screenshots/.edge-profile/
-docs/screenshots/*.html
 

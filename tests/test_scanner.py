@@ -3,12 +3,75 @@ from pathlib import Path
 from deepopen.cli import main
 from deepopen.scanner import scan_path, scan_text
 
-ROOT = Path(__file__).resolve().parents[1]
-EXAMPLES = ROOT / "examples"
+INSECURE_PY = '''
+import os
+import pickle
+import sqlite3
+
+PASSWORD = "supersecret-demo-key"
+API_KEY = "abcdefghijklmnopqrstuvwxyz"
+
+def load_user(raw):
+    return pickle.loads(raw)
+
+def run_query(name):
+    conn = sqlite3.connect(":memory:")
+    conn.execute(f"SELECT * FROM users WHERE name = '{name}'")
+
+def run_cmd(arg):
+    os.system("echo " + arg)
+
+def parse_number(text):
+    return eval(text)
+
+def add_item(items=[]):
+    items.append(1)
+    return items
+
+def silent():
+    try:
+        parse_number("1")
+    except:
+        pass
+
+def is_none(value):
+    return value == None
+'''
+
+SAFE_PY = '''
+from __future__ import annotations
+import json
+import sqlite3
+from pathlib import Path
+
+def load_config(raw: str) -> dict:
+    return json.loads(raw)
+
+def run_query(conn: sqlite3.Connection, name: str) -> list[tuple]:
+    cur = conn.execute("SELECT id, name FROM users WHERE name = ?", (name,))
+    return list(cur.fetchall())
+
+def add_item(items: list[int] | None = None) -> list[int]:
+    if items is None:
+        items = []
+    items.append(1)
+    return items
+
+def maybe_value(value: object) -> bool:
+    return value is None
+
+def read_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise RuntimeError(f"cannot read {path}") from exc
+'''
 
 
-def test_flags_insecure_python_patterns() -> None:
-    result = scan_path(EXAMPLES / "insecure_patterns.py")
+def test_flags_insecure_python_patterns(tmp_path: Path) -> None:
+    target = tmp_path / "insecure_patterns.py"
+    target.write_text(INSECURE_PY, encoding="utf-8")
+    result = scan_path(target)
     rule_ids = {item.rule_id for item in result.findings}
     assert result.files_scanned == 1
     assert any(rid in rule_ids for rid in ("SEC004",))
@@ -20,8 +83,10 @@ def test_flags_insecure_python_patterns() -> None:
     assert any(rid in {"AST013", "BUG002"} for rid in rule_ids)
 
 
-def test_clean_python_file_has_no_findings() -> None:
-    result = scan_path(EXAMPLES / "safe_patterns.py")
+def test_clean_python_file_has_no_findings(tmp_path: Path) -> None:
+    target = tmp_path / "safe_patterns.py"
+    target.write_text(SAFE_PY, encoding="utf-8")
+    result = scan_path(target)
     assert result.findings == []
 
 
