@@ -278,6 +278,87 @@ class _Visitor(ast.NodeVisitor):
                         "按最小权限设置，例如 0o644 / 0o755。", "CWE-732",
                     )
                     break
+        last = name.rsplit(".", 1)[-1]
+        if last == "extractall" and not any(kw.arg == "filter" for kw in node.keywords):
+            self._add(
+                node, "AST060", "解压未限制成员路径", Severity.HIGH, Category.SECURITY,
+                "extractall 默认可能把压缩包内的相对路径写到目录外。",
+                "Python 3.12+ 传入 filter='data'；更早版本先校验每个成员路径都落在目标根目录内。",
+                "CWE-22",
+            )
+        if last == "extract":
+            recv = ""
+            if isinstance(node.func, ast.Attribute):
+                target = node.func.value
+                recv = _call_name(target)
+                if not recv and isinstance(target, ast.Call):
+                    recv = _call_name(target.func)
+            blob = f"{name} {recv}".lower()
+            if any(part in blob for part in ("zip", "tar")):
+                self._add(
+                    node, "AST061", "压缩包 extract 未校验路径", Severity.HIGH, Category.SECURITY,
+                    "未校验的成员名可能写成 ../ 逃出解压目录。",
+                    "规范化成员路径，并拒绝目标根目录之外的文件。",
+                    "CWE-22",
+                )
+        if any(kw.arg == "type" and isinstance(kw.value, ast.Name) and kw.value.id == "eval" for kw in node.keywords):
+            self._add(
+                node, "AST062", "argparse type=eval", Severity.HIGH, Category.SECURITY,
+                "把 eval 当作参数类型会执行命令行里的 Python 表达式。",
+                "改用 int/Path/合法解析函数；不要对用户输入 eval。",
+                "CWE-95",
+            )
+        if name in {"os.umask", "umask"} and node.args:
+            arg0 = node.args[0]
+            if isinstance(arg0, ast.Constant) and arg0.value == 0:
+                self._add(
+                    node, "AST063", "umask(0) 过宽", Severity.MEDIUM, Category.CONFIG,
+                    "umask 为 0 时新建文件对其他用户也可写。",
+                    "使用更严的 umask，例如 0o022 或 0o077。",
+                    "CWE-732",
+                )
+        if name in {
+            "ctypes.CDLL", "ctypes.WinDLL", "ctypes.PyDLL",
+            "ctypes.cdll.LoadLibrary", "cdll.LoadLibrary",
+        } and node.args and _is_dynamic_string(node.args[0]):
+            self._add(
+                node, "AST064", "动态加载本地库", Severity.HIGH, Category.SECURITY,
+                "库路径由拼接得到，可能加载目录外的 .so/.dll。",
+                "只加载固定路径的库，或对路径做白名单。",
+                "CWE-427",
+            )
+        if name in {"ftplib.FTP", "telnetlib.Telnet"}:
+            self._add(
+                node, "AST065", "明文网络协议客户端", Severity.MEDIUM, Category.SECURITY,
+                f"{name} 默认不加密，口令和内容会在链路上明文传输。",
+                "FTP 改用 FTP_TLS 或 SFTP；远程管理用 SSH，不要用 Telnet。",
+                "CWE-319",
+            )
+        if name.endswith("ServerProxy") or name.endswith("SimpleXMLRPCServer"):
+            self._add(
+                node, "AST066", "XML-RPC 服务/客户端", Severity.MEDIUM, Category.SECURITY,
+                "XML-RPC 可能还原意外对象，且常走明文 HTTP。",
+                "改用 JSON over HTTPS，并校验来源；不要对不可信端点启用允许任意对象的还原。",
+                "CWE-502",
+            )
+        if name == "socket.create_connection":
+            timed = any(kw.arg == "timeout" and not _is_none(kw.value) for kw in node.keywords)
+            if len(node.args) >= 3:
+                timed = True
+            if not timed:
+                self._add(
+                    node, "AST067", "socket.create_connection 未设置 timeout", Severity.MEDIUM, Category.BUG,
+                    "没有超时的连接可能一直卡住调用方。",
+                    "传入 timeout，并处理超时异常。",
+                    "CWE-400",
+                )
+        if name == "http.client.HTTPConnection":
+            self._add(
+                node, "AST068", "使用明文 HTTPConnection", Severity.MEDIUM, Category.SECURITY,
+                "HTTPConnection 不会加密传输。",
+                "对外通信改用 HTTPSConnection，并保持证书校验。",
+                "CWE-319",
+            )
         self.generic_visit(node)
 
     def visit_Assign(self, node: ast.Assign) -> None:

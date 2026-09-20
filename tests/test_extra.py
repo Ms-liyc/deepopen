@@ -2,7 +2,7 @@ from pathlib import Path
 
 from deepopen.cli import main
 from deepopen.config import Config
-from deepopen.report import render_sarif, write_report
+from deepopen.report import render_markdown, render_sarif, write_report
 from deepopen.scanner import scan_path, scan_text
 
 
@@ -89,6 +89,20 @@ def test_disable_rules() -> None:
     cfg = Config(disable_rules=["AST001", "PY001"])
     findings = scan_text(Path("app.py"), "eval(user_input)\n", config=cfg)
     assert all(item.rule_id not in {"AST001", "PY001"} for item in findings)
+
+
+def test_markdown_fix_plan(tmp_path: Path) -> None:
+    sample = tmp_path / "bad.py"
+    sample.write_text("eval(user_input)\nPASSWORD = \"supersecret-demo-key\"\n", encoding="utf-8")
+    result = scan_path(sample)
+    body = render_markdown(result)
+    assert "缺陷修改方案" in body
+    assert "**修改方案**" in body
+    assert "问题:" in body
+    assert "eval" in body.lower() or "AST001" in body or "PY001" in body
+    md_path = tmp_path / "out" / "plan.md"
+    write_report(result, md_path)
+    assert "修改清单" in md_path.read_text(encoding="utf-8")
 
 
 def test_sarif_and_html_report(tmp_path: Path) -> None:

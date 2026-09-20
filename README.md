@@ -4,7 +4,7 @@
 
 它做的是防守检查，不是渗透测试。不会生成攻击步骤、PoC 或利用代码。
 
-当前版本 **0.4.0** · Python 3.10+ · 仅标准库 · 约 195 条规则
+当前版本 **0.4.1** · Python 3.10+ · 仅标准库 · 约 239 条规则
 
 ## 它能做什么
 
@@ -12,7 +12,7 @@
 - **密钥检测**：私钥、云厂商密钥、常见令牌形态、连接串口令、误提交的 `.env`
 - **缺陷检测**：裸 except、可变默认参数、资源泄漏、死代码、超时缺失等
 - **清单分析**：`pyproject.toml` / `go.mod` / `Cargo.toml` 未钉版本，GitHub Actions `write-all`
-- **本地控制台**：只监听 `127.0.0.1`，可筛选、看源码上下文、预览修复
+- **本地控制台**：只监听 `127.0.0.1`，可筛选、看源码上下文、预览修复，并导出 Markdown 修改方案
 - **报告**：终端 / JSON / HTML / Markdown / SARIF
 - **基线与修复**：忽略已接受命中；`deepopen fix` 只改 `== None`、裸 `except` 这类质量问题
 - **工程接入**：`deepopen.toml`、行内忽略、自定义规则、Git pre-commit、GitHub Actions
@@ -56,7 +56,7 @@ python -m deepopen scan . --fail-on high
 python -m deepopen serve .
 ```
 
-浏览器访问 http://127.0.0.1:8765/ ，路径填要扫描的目录，点「开始检查」。控制台只绑定回环地址，不会对外网开放。
+浏览器访问 http://127.0.0.1:8765/ ，路径填要扫描的目录，点「开始检查」。检查完成后可点「导出修改方案」，下载一份说明有哪些问题、该怎么改的 Markdown 文件。控制台只绑定回环地址，不会对外网开放。
 
 演示链接也可以带参数自动开扫：
 
@@ -178,7 +178,7 @@ python -m deepopen fix . --apply  # 写回
 | 终端 | 默认 |
 | HTML | `-o reports/report.html` |
 | JSON | `--format json` 或 `-o out.json` |
-| Markdown | `--format md` 或 `-o out.md` |
+| Markdown | `--format md` 或 `-o out.md`；控制台「导出修改方案」也会下载这份文件 |
 | SARIF | `-o out.sarif`（可上传 GitHub Code Scanning） |
 
 ## 接入 CI 与 Git 钩子

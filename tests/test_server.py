@@ -29,6 +29,7 @@ def test_server_scan_roundtrip(tmp_path: Path) -> None:
         with urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=5) as resp:
             home = resp.read().decode("utf-8")
         assert "DeepOpen" in home
+        assert "导出修改方案" in home
         req = urllib.request.Request(
             f"http://127.0.0.1:{port}/api/scan",
             data=json.dumps({"path": str(sample)}).encode("utf-8"),
@@ -39,6 +40,18 @@ def test_server_scan_roundtrip(tmp_path: Path) -> None:
             payload = json.loads(resp.read().decode("utf-8"))
         assert payload["files_scanned"] == 1
         assert payload["findings"] == []
+        md_req = urllib.request.Request(
+            f"http://127.0.0.1:{port}/api/scan",
+            data=json.dumps({"path": str(sample), "format": "md"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(md_req, timeout=10) as resp:
+            markdown = resp.read().decode("utf-8")
+            disposition = resp.headers.get("Content-Disposition") or ""
+        assert "deepopen-fix-plan.md" in disposition
+        assert "缺陷修改方案" in markdown
+        assert "未发现规则命中" in markdown
     finally:
         httpd.shutdown()
         httpd.server_close()

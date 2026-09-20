@@ -303,4 +303,38 @@ BUG_RULES: tuple[PatternRule, ...] = (
         remediation="用 if not items: 判断空容器。",
         suffixes=PY,
     ),
+    PatternRule(
+        rule_id="BUG029",
+        title="日志或打印可能含出口令",
+        severity=Severity.MEDIUM,
+        category=Category.SECRET,
+        pattern=_re(
+            r"(?:print|logging\.\w+|logger\.\w+|console\.log)\s*\([^)\n]*(?:password|passwd|secret|api[_-]?key|access[_-]?token)"
+        ),
+        message="把口令或令牌写进日志会扩大泄露面。",
+        remediation="日志只保留非敏感标识；密钥不要打印。",
+        cwe="CWE-532",
+        suffixes=PY | JS,
+    ),
+    PatternRule(
+        rule_id="BUG030",
+        title="debugger 语句",
+        severity=Severity.LOW,
+        category=Category.QUALITY,
+        pattern=_re(r"\bdebugger\b"),
+        message="debugger 会在有开发者工具时打断执行，不应进入生产包。",
+        remediation="删除 debugger，或只在本地构建中启用。",
+        suffixes=JS,
+    ),
+    PatternRule(
+        rule_id="BUG031",
+        title="空的 for 循环体",
+        severity=Severity.LOW,
+        category=Category.BUG,
+        pattern=_re(r"for\s+\w+\s+in\s+[^:]+:\s*pass\b"),
+        message="循环体只有 pass，通常是未写完或无效代码。",
+        remediation="补上处理逻辑，或删掉这段循环。",
+        suffixes=PY,
+        skip_comments=False,
+    ),
 )

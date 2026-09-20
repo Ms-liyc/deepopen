@@ -120,4 +120,15 @@ JAVASCRIPT_RULES: tuple[PatternRule, ...] = (
         suffixes=JS | frozenset({".env", ".yml", ".yaml"}),
         names=frozenset({".env"}),
     ),
+    PatternRule(
+        rule_id="JS017",
+        title="jQuery html() 写入未转义内容",
+        severity=Severity.HIGH,
+        category=Category.SECURITY,
+        pattern=_re(r"""\$\([^)]*\)\.html\s*\("""),
+        message="jQuery html() 会把字符串当 HTML 解析。",
+        remediation="改用 .text()；必须插入 HTML 时先消毒。",
+        cwe="CWE-79",
+        suffixes=JS,
+    ),
 )

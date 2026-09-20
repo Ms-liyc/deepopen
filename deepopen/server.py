@@ -28,11 +28,13 @@ class DeepOpenHandler(BaseHTTPRequestHandler):
     def log_message(self, fmt: str, *args: object) -> None:
         return
 
-    def _send(self, status: int, body: bytes, content_type: str) -> None:
+    def _send(self, status: int, body: bytes, content_type: str, filename: str | None = None) -> None:
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        if filename:
+            self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
         self.end_headers()
         self.wfile.write(body)
 
@@ -197,13 +199,23 @@ class DeepOpenHandler(BaseHTTPRequestHandler):
             hide_baseline=not show_baseline,
         )
         if fmt == "html":
-            self._send(200, render_html(result).encode("utf-8"), "text/html; charset=utf-8")
+            self._send(
+                200,
+                render_html(result).encode("utf-8"),
+                "text/html; charset=utf-8",
+                "deepopen-report.html",
+            )
             return
         if fmt == "sarif":
             self._send(200, render_sarif(result).encode("utf-8"), "application/json; charset=utf-8")
             return
         if fmt == "md":
-            self._send(200, render_markdown(result).encode("utf-8"), "text/markdown; charset=utf-8")
+            self._send(
+                200,
+                render_markdown(result).encode("utf-8"),
+                "text/markdown; charset=utf-8",
+                "deepopen-fix-plan.md",
+            )
             return
         self._send(200, render_json(result).encode("utf-8"), "application/json; charset=utf-8")
 

@@ -57,6 +57,7 @@
       background: var(--mint); color: #062019; font-weight: 700;
     }
     button.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); font-weight: 600; }
+    button.plan { background: transparent; color: var(--mint); border: 1px solid var(--mint); font-weight: 700; width: 100%; }
     button:disabled { opacity: .5; cursor: wait; }
     .tabs { display: flex; gap: 6px; }
     .tabs button { flex: 1; font-size: 12px; }
@@ -142,12 +143,13 @@
       </div>
       <div class="row">
         <button id="run" style="flex:1">开始检查</button>
-        <button id="export" class="ghost">导出 HTML</button>
       </div>
+      <button id="export-md" class="plan">导出修改方案</button>
       <div class="row">
+        <button id="export" class="ghost" style="flex:1">导出 HTML</button>
         <button id="export-json" class="ghost" style="flex:1">导出 JSON</button>
-        <button id="preview-fix" class="ghost" style="flex:1">预览修复</button>
       </div>
+      <button id="preview-fix" class="ghost">预览修复</button>
       <label class="hint"><input id="staged" type="checkbox"> 仅 Git 暂存文件</label>
       <label class="hint"><input id="show-base" type="checkbox"> 显示基线已接受项</label>
       <p class="hint" id="scan-meta">只监听本机 127.0.0.1。检查的是源码模式，不是渗透测试。</p>
@@ -331,17 +333,48 @@
       }
     };
 
-    $("export").onclick = async () => {
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function exportScan(format, filename) {
       const res = await fetch("/api/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: $("path").value, staged: $("staged").checked, format: "html", profile: $("profile").value })
+        body: JSON.stringify({
+          path: $("path").value,
+          staged: $("staged").checked,
+          show_baseline: $("show-base").checked,
+          profile: $("profile").value,
+          format
+        })
       });
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = "deepopen-report.html"; a.click();
-      URL.revokeObjectURL(url);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "导出失败" }));
+        throw new Error(data.error || "导出失败");
+      }
+      downloadBlob(await res.blob(), filename);
+    }
+
+    $("export-md").onclick = async () => {
+      try {
+        await exportScan("md", "deepopen-fix-plan.md");
+      } catch (err) {
+        $("detail").innerHTML = `<h2>无法导出修改方案</h2><p>${esc(err.message)}</p>`;
+      }
+    };
+
+    $("export").onclick = async () => {
+      try {
+        await exportScan("html", "deepopen-report.html");
+      } catch (err) {
+        $("detail").innerHTML = `<h2>无法导出 HTML</h2><p>${esc(err.message)}</p>`;
+      }
     };
 
     $("rows").onclick = (ev) => {
@@ -352,16 +385,11 @@
     };
 
     $("export-json").onclick = async () => {
-      const res = await fetch("/api/scan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: $("path").value, staged: $("staged").checked, show_baseline: $("show-base").checked, profile: $("profile").value })
-      });
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = "deepopen-report.json"; a.click();
-      URL.revokeObjectURL(url);
+      try {
+        await exportScan("json", "deepopen-report.json");
+      } catch (err) {
+        $("detail").innerHTML = `<h2>无法导出 JSON</h2><p>${esc(err.message)}</p>`;
+      }
     };
 
     $("preview-fix").onclick = async () => {

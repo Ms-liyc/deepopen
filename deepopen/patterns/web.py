@@ -55,4 +55,17 @@ WEB_RULES: tuple[PatternRule, ...] = (
         cwe="CWE-1004",
         suffixes=CODE | frozenset({".py"}),
     ),
+    PatternRule(
+        rule_id="WEB005",
+        title="密码框开启自动填充",
+        severity=Severity.LOW,
+        category=Category.SECURITY,
+        pattern=_re(
+            r"<input[^>]*(?:type\s*=\s*['\"]password['\"][^>]*autocomplete\s*=\s*['\"]on['\"]|autocomplete\s*=\s*['\"]on['\"][^>]*type\s*=\s*['\"]password['\"])"
+        ),
+        message="密码框允许自动填充时，共享设备上的口令更容易被带出。",
+        remediation="敏感表单使用 autocomplete=\"off\" 或更细的 token 值。",
+        cwe="CWE-525",
+        suffixes=HTML,
+    ),
 )
