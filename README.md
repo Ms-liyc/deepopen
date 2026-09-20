@@ -1,28 +1,52 @@
+<div align="center">
+
 # DeepOpen
 
-本地静态检查工具：扫描**你自己的源码**，找出常见缺陷、密钥泄露和不安全写法，并给出加固建议。
+**本地静态检查工具**
 
-它做的是防守检查，不是渗透测试。不会生成攻击步骤、PoC 或利用代码。
+扫描**你自己的源码**，找出常见缺陷、密钥泄露和不安全写法，并给出加固建议。
 
-当前版本 **0.4.1** · Python 3.10+ · 仅标准库 · 约 239 条规则
+### ✨ 当前版本 0.4.1
+
+Python 3.10+ · 仅标准库 · 约 239 条规则
+
+#### 🌟 项目亮点
+
+🎨 **多语言规则** — Python、JS/TS、Java、Go、PHP、C/C++、Rust 等  
+🔒 **防守检查** — 只给加固建议，不生成攻击步骤、PoC 或利用代码  
+🖥️ **本机控制台** — 只监听 `127.0.0.1`，可导出 Markdown 修改方案  
+📋 **工程接入** — 基线、钩子、GitHub Actions、自定义规则
+
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Version](https://img.shields.io/badge/version-0.4.1-3ee0b2)](https://github.com/Ms-liyc/deepopen)
+[![Stdlib](https://img.shields.io/badge/deps-stdlib%20only-success)](https://github.com/Ms-liyc/deepopen)
+[![Rules](https://img.shields.io/badge/rules-239-orange)](https://github.com/Ms-liyc/deepopen)
+[![Stars](https://img.shields.io/github/stars/Ms-liyc/deepopen?style=flat)](https://github.com/Ms-liyc/deepopen/stargazers)
+[![Issues](https://img.shields.io/github/issues/Ms-liyc/deepopen)](https://github.com/Ms-liyc/deepopen/issues)
+
+它做的是防守检查，不是渗透测试。请在自己的仓库上运行。
+
+> ⚠️ **注意：** 扫描结果不能证明「没有漏洞」，也不能替代代码评审、测试和依赖 CVE 扫描。
+
+</div>
 
 ## 它能做什么
 
-- **多语言规则**：Python（AST + 正则）、JavaScript/TypeScript、Java/Kotlin、Go、PHP、Ruby、C#、C/C++、Rust、SQL、HTML、Docker/K8s、Terraform、Shell
-- **密钥检测**：私钥、云厂商密钥、常见令牌形态、连接串口令、误提交的 `.env`
-- **缺陷检测**：裸 except、可变默认参数、资源泄漏、死代码、超时缺失等
-- **清单分析**：`pyproject.toml` / `go.mod` / `Cargo.toml` 未钉版本，GitHub Actions `write-all`
-- **本地控制台**：只监听 `127.0.0.1`，可筛选、看源码上下文、预览修复，并导出 Markdown 修改方案
-- **报告**：终端 / JSON / HTML / Markdown / SARIF
-- **基线与修复**：忽略已接受命中；`deepopen fix` 只改 `== None`、裸 `except` 这类质量问题
-- **工程接入**：`deepopen.toml`、行内忽略、自定义规则、Git pre-commit、GitHub Actions
+- 🌐 **多语言规则**：Python（AST + 正则）、JavaScript/TypeScript、Java/Kotlin、Go、PHP、Ruby、C#、C/C++、Rust、SQL、HTML、Docker/K8s、Terraform、Shell
+- 🔑 **密钥检测**：私钥、云厂商密钥、常见令牌形态、连接串口令、误提交的 `.env`
+- 🐛 **缺陷检测**：裸 except、可变默认参数、资源泄漏、死代码、超时缺失等
+- 📦 **清单分析**：`pyproject.toml` / `go.mod` / `Cargo.toml` 未钉版本，GitHub Actions `write-all`
+- 🖥️ **本地控制台**：只监听 `127.0.0.1`，可筛选、看源码上下文、预览修复，并导出 Markdown 修改方案
+- 📄 **报告**：终端 / JSON / HTML / Markdown / SARIF
+- 🛠️ **基线与修复**：忽略已接受命中；`deepopen fix` 只改 `== None`、裸 `except` 这类质量问题
+- ⚙️ **工程接入**：`deepopen.toml`、行内忽略、自定义规则、Git pre-commit、GitHub Actions
 
 ## 它不能代替什么
 
-- 不能证明「没有漏洞」
-- 不能发现鉴权设计、业务逻辑、运行时配置问题
-- 不能替代依赖 CVE 扫描（请另外使用 pip-audit / npm audit 等）
-- 不能替代代码评审和测试
+- ❌ 不能证明「没有漏洞」
+- ❌ 不能发现鉴权设计、业务逻辑、运行时配置问题
+- ❌ 不能替代依赖 CVE 扫描（请另外使用 pip-audit / npm audit 等）
+- ❌ 不能替代代码评审和测试
 
 ## 安装
 
