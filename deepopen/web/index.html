@@ -21,6 +21,7 @@
       --ok: #3ee0b2;
       --font: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
       --mono: "Cascadia Code", "Consolas", monospace;
+      --aside: 300px;
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); }
@@ -28,29 +29,49 @@
       background-image:
         radial-gradient(1200px 500px at 10% -10%, rgba(62, 224, 178, .08), transparent 50%),
         linear-gradient(180deg, rgba(255,255,255,.02), transparent 30%);
+      overflow: hidden;
     }
-    .app { display: grid; grid-template-columns: 300px 1fr; min-height: 100%; }
+    .app {
+      display: grid;
+      grid-template-columns: var(--aside) minmax(0, 1fr);
+      height: 100%;
+    }
     aside {
       border-right: 1px solid var(--line);
-      background: rgba(15, 26, 42, .92);
-      padding: 22px 18px;
+      background: rgba(15, 26, 42, .94);
+      padding: 18px 16px 20px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
+      overflow: auto;
     }
-    .brand { display: flex; gap: 12px; align-items: center; }
+    .brand { display: flex; gap: 12px; align-items: center; padding: 2px 2px 4px; }
     .mark {
-      width: 48px; height: 48px; border-radius: 12px;
-      object-fit: cover; flex-shrink: 0;
-      background: #08111d; border: 1px solid var(--line);
+      width: 52px; height: 52px; border-radius: 14px;
+      object-fit: cover; object-position: center;
+      flex-shrink: 0; background: #08111d; border: 1px solid var(--line);
     }
-    .brand h1 { font-size: 16px; margin: 0; letter-spacing: .04em; }
-    .brand p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+    .brand h1 { font-size: 18px; margin: 0; letter-spacing: .03em; }
+    .brand p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+    .block {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .block-title {
+      font-size: 11px; color: var(--muted); letter-spacing: .08em;
+      text-transform: uppercase; margin: 0;
+    }
     label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 6px; }
     input[type=text], select {
       width: 100%; background: var(--bg); color: var(--text);
       border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font: inherit;
     }
+    input[type=text]:focus, select:focus { outline: 1px solid rgba(62,224,178,.45); border-color: var(--mint); }
     .row { display: flex; gap: 8px; }
     button {
       border: 0; border-radius: 10px; padding: 10px 12px; font: inherit; cursor: pointer;
@@ -58,50 +79,87 @@
     }
     button.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); font-weight: 600; }
     button.plan { background: transparent; color: var(--mint); border: 1px solid var(--mint); font-weight: 700; width: 100%; }
-    button:disabled { opacity: .5; cursor: wait; }
+    button:disabled { opacity: .55; cursor: wait; }
+    #run { width: 100%; }
     .tabs { display: flex; gap: 6px; }
-    .tabs button { flex: 1; font-size: 12px; }
+    .tabs button { flex: 1; font-size: 12px; padding: 8px 6px; }
     .tabs button.active { background: var(--panel-2); color: var(--mint); border: 1px solid var(--mint); }
-    .hint { color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .hint { color: var(--muted); font-size: 12px; line-height: 1.55; margin: 0; }
+    .opt {
+      display: flex; align-items: flex-start; gap: 8px; color: var(--text);
+      font-size: 12px; line-height: 1.4; cursor: pointer; margin: 0;
+    }
+    .opt input { margin-top: 2px; accent-color: var(--mint); }
+    #scan-meta { margin-top: auto; padding-top: 6px; }
+    main {
+      min-width: 0; min-height: 0;
+      padding: 18px 22px 18px;
+      display: flex; flex-direction: column;
+    }
+    section { min-height: 0; }
+    #view-scan:not([hidden]) {
+      flex: 1; min-height: 0;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    #view-rules:not([hidden]), #view-guide:not([hidden]) {
+      flex: 1; min-height: 0; overflow: auto;
+    }
     .progress-wrap {
       background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
-      padding: 14px 16px; margin-bottom: 16px;
+      padding: 12px 14px; flex-shrink: 0;
     }
     .progress-head { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; margin-bottom: 8px; }
     .progress-head b { color: var(--mint); font-variant-numeric: tabular-nums; }
-    .progress-track { height: 10px; background: #08111d; border-radius: 999px; overflow: hidden; border: 1px solid var(--line); }
+    .progress-track { height: 8px; background: #08111d; border-radius: 999px; overflow: hidden; border: 1px solid var(--line); }
     .progress-bar {
       height: 100%; width: 0%;
       background: linear-gradient(90deg, var(--mint), var(--sky));
       transition: width .12s ease;
     }
     .progress-meta { margin-top: 8px; color: var(--muted); font-size: 12px; word-break: break-all; }
-    main { padding: 22px 26px 40px; min-width: 0; }
-    .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
+    .stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; flex-shrink: 0; }
     .stat {
-      background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px;
+      background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px;
     }
-    .stat b { display: block; font-size: 26px; }
-    .stat span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+    .stat b { display: block; font-size: 24px; line-height: 1.1; }
+    .stat span { color: var(--muted); font-size: 12px; }
     .stat.critical b { color: var(--violet); }
     .stat.high b { color: var(--coral); }
     .stat.medium b { color: var(--gold); }
     .stat.low b { color: var(--sky); }
     .stat.info b { color: var(--muted); }
-    .toolbar { display: flex; gap: 8px; margin: 12px 0 16px; flex-wrap: wrap; align-items: center; }
+    .toolbar {
+      display: flex; gap: 8px; flex-wrap: wrap; align-items: center; flex-shrink: 0;
+    }
+    .toolbar #q { flex: 1; min-width: 180px; max-width: 360px; }
+    .toolbar #cat { width: 140px; }
     .chip {
       border: 1px solid var(--line); background: var(--panel); color: var(--muted);
       border-radius: 999px; padding: 6px 10px; font-size: 12px; cursor: pointer;
     }
-    .chip.on { color: var(--text); border-color: var(--mint); }
-    .layout { display: grid; grid-template-columns: 1.2fr .8fr; gap: 16px; align-items: start; }
+    .chip.on { color: var(--text); border-color: var(--mint); background: #123142; }
+    .layout {
+      flex: 1; min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(300px, .8fr);
+      gap: 14px;
+    }
     .list, .detail, .panel {
       background: var(--panel); border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
     }
+    .list, .detail { min-height: 0; overflow: auto; }
+    .list-head, .detail-head {
+      position: sticky; top: 0; z-index: 1;
+      background: var(--panel-2); border-bottom: 1px solid var(--line);
+      padding: 10px 14px; font-size: 12px; color: var(--muted);
+    }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     th { text-align: left; color: var(--muted); font-size: 11px; letter-spacing: .05em; padding: 10px 12px; }
-    td { padding: 10px 12px; border-top: 1px solid var(--line); vertical-align: top; cursor: pointer; }
+    td { padding: 11px 12px; border-top: 1px solid var(--line); vertical-align: top; cursor: pointer; }
+    tr:hover td { background: #15263a; }
     tr.selected td { background: #173047; }
+    .rule-id { font-family: var(--mono); font-size: 12px; color: var(--mint); }
+    .muted { color: var(--muted); font-size: 12px; }
     .sev { font-family: var(--mono); font-size: 11px; font-weight: 700; text-transform: uppercase; }
     .sev.critical { color: var(--violet); }
     .sev.high { color: var(--coral); }
@@ -109,20 +167,32 @@
     .sev.low { color: var(--sky); }
     .sev.info { color: var(--muted); }
     code { font-family: var(--mono); font-size: 12px; color: #d7e7ff; }
-    .detail { padding: 18px; min-height: 280px; }
-    .detail h2 { margin: 0 0 8px; font-size: 18px; }
-    .detail p { color: #c9d6e8; line-height: 1.6; }
+    .detail { padding: 0; }
+    .detail-body { padding: 16px 18px 20px; }
+    .detail h2 { margin: 8px 0 10px; font-size: 18px; line-height: 1.35; }
+    .detail p { color: #c9d6e8; line-height: 1.6; margin: 0 0 10px; }
     .empty { color: var(--muted); padding: 28px; }
-    .section { margin-bottom: 18px; }
+    .guide-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+    .section { margin: 0; }
     .section h3 { margin: 0 0 8px; font-size: 15px; }
+    .section ul { margin: 0; padding-left: 18px; color: #c9d6e8; line-height: 1.55; }
     .codebox { background:#08111d; border-radius:10px; padding:10px 12px; font-family:var(--mono); font-size:12px; overflow:auto; }
-    .codebox .hit { color: var(--coral); }
-    .badge { display:inline-block; border:1px solid var(--line); border-radius:999px; padding:2px 8px; font-size:11px; color:var(--muted); margin-right:6px; }
-    #view-rules input { margin-bottom:12px; max-width:320px; }
+    .codebox .hit { color: var(--coral); background: rgba(255,107,122,.08); }
+    .badge { display:inline-block; border:1px solid var(--line); border-radius:999px; padding:2px 8px; font-size:11px; color:var(--muted); margin: 0 6px 6px 0; }
+    .fix-box { background: #102033; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin: 12px 0; }
+    .fix-box strong { display: block; margin-bottom: 6px; color: var(--mint); font-size: 12px; }
+    #view-rules .rules-bar { margin-bottom: 12px; max-width: 360px; }
     @media (max-width: 1080px) {
-      .app { grid-template-columns: 1fr; }
+      body { overflow: auto; }
+      .app { grid-template-columns: 1fr; height: auto; min-height: 100%; }
+      aside { border-right: 0; border-bottom: 1px solid var(--line); max-height: none; }
       .stats { grid-template-columns: repeat(3, 1fr); }
-      .layout { grid-template-columns: 1fr; }
+      .layout { grid-template-columns: 1fr; min-height: 420px; }
+      #view-scan:not([hidden]) { min-height: 70vh; }
+    }
+    @media (max-width: 640px) {
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .brand h1 { font-size: 16px; }
     }
   </style>
 </head>
@@ -130,7 +200,7 @@
   <div class="app">
     <aside>
       <div class="brand">
-        <img class="mark" src="/static/logo.jpg" width="48" height="48" alt="屿">
+        <img class="mark" src="/static/logo.jpg" width="52" height="52" alt="屿">
         <div>
           <h1>DeepOpen</h1>
           <p id="ver">本地代码检查台</p>
@@ -141,31 +211,37 @@
         <button class="ghost" data-tab="rules">规则</button>
         <button class="ghost" data-tab="guide">清单</button>
       </div>
-      <div>
-        <label for="path">扫描路径</label>
-        <input id="path" type="text" spellcheck="false">
+      <div class="block">
+        <div>
+          <label for="path">扫描路径</label>
+          <input id="path" type="text" spellcheck="false">
+        </div>
+        <div>
+          <label for="profile">配置档</label>
+          <select id="profile">
+            <option value="all">all · 全部规则</option>
+            <option value="security">security · 安全 / 密钥 / 配置</option>
+            <option value="bug">bug · 缺陷 / 质量</option>
+            <option value="secret">secret · 仅密钥</option>
+          </select>
+        </div>
+        <button id="run">开始检查</button>
       </div>
-      <div>
-        <label for="profile">配置档</label>
-        <select id="profile">
-          <option value="all">all · 全部规则</option>
-          <option value="security">security · 安全 / 密钥 / 配置</option>
-          <option value="bug">bug · 缺陷 / 质量</option>
-          <option value="secret">secret · 仅密钥</option>
-        </select>
+      <div class="block">
+        <p class="block-title">导出与修复</p>
+        <button id="export-md" class="plan">导出修改方案</button>
+        <div class="row">
+          <button id="export" class="ghost" style="flex:1">导出 HTML</button>
+          <button id="export-json" class="ghost" style="flex:1">导出 JSON</button>
+        </div>
+        <button id="preview-fix" class="ghost">预览修复</button>
       </div>
-      <div class="row">
-        <button id="run" style="flex:1">开始检查</button>
+      <div class="block">
+        <p class="block-title">选项</p>
+        <label class="opt"><input id="staged" type="checkbox"><span>仅 Git 暂存文件</span></label>
+        <label class="opt"><input id="show-base" type="checkbox"><span>显示基线已接受项</span></label>
+        <label class="opt"><input id="advisories" type="checkbox"><span>查询 OSV 依赖公告（需联网）</span></label>
       </div>
-      <button id="export-md" class="plan">导出修改方案</button>
-      <div class="row">
-        <button id="export" class="ghost" style="flex:1">导出 HTML</button>
-        <button id="export-json" class="ghost" style="flex:1">导出 JSON</button>
-      </div>
-      <button id="preview-fix" class="ghost">预览修复</button>
-      <label class="hint"><input id="staged" type="checkbox"> 仅 Git 暂存文件</label>
-      <label class="hint"><input id="show-base" type="checkbox"> 显示基线已接受项</label>
-      <label class="hint"><input id="advisories" type="checkbox"> 查询 OSV 依赖公告（需联网）</label>
       <p class="hint" id="scan-meta">只监听本机 127.0.0.1。检查的是源码模式，不是渗透测试。</p>
     </aside>
     <main>
@@ -180,14 +256,14 @@
         </div>
         <div class="stats" id="stats"></div>
         <div class="toolbar">
-          <input id="q" type="text" placeholder="过滤规则、路径、说明" style="max-width:320px">
+          <input id="q" type="text" placeholder="过滤规则、路径、说明">
           <span class="chip on" data-sev="all">全部</span>
-          <span class="chip" data-sev="critical">critical</span>
-          <span class="chip" data-sev="high">high</span>
-          <span class="chip" data-sev="medium">medium</span>
-          <span class="chip" data-sev="low">low</span>
-          <span class="chip" data-sev="info">info</span>
-          <select id="cat" style="max-width:140px">
+          <span class="chip" data-sev="critical">严重</span>
+          <span class="chip" data-sev="high">高危</span>
+          <span class="chip" data-sev="medium">中等</span>
+          <span class="chip" data-sev="low">低</span>
+          <span class="chip" data-sev="info">提示</span>
+          <select id="cat">
             <option value="all">全部类别</option>
             <option value="security">security</option>
             <option value="secret">secret</option>
@@ -198,14 +274,18 @@
         </div>
         <div class="layout">
           <div class="list">
+            <div class="list-head">命中列表</div>
             <table>
               <thead><tr><th>级别</th><th>规则</th><th>位置</th></tr></thead>
               <tbody id="rows"><tr><td colspan="3" class="empty">输入路径后点击「开始检查」。</td></tr></tbody>
             </table>
           </div>
           <div class="detail" id="detail">
-            <h2>等待扫描</h2>
-            <p>命中项会显示说明和加固建议。请在自己的仓库上运行，不要把示例里的不安全写法拷进业务代码。</p>
+            <div class="detail-head">问题详情</div>
+            <div class="detail-body">
+              <h2>等待扫描</h2>
+              <p>命中项会显示说明和加固建议。请在自己的仓库上运行，不要把示例里的不安全写法拷进业务代码。</p>
+            </div>
           </div>
         </div>
       </section>
@@ -215,6 +295,7 @@
   </div>
   <script>
     const state = { findings: [], selected: 0, sev: "all", cat: "all", q: "", last: null, rules: [] };
+    const SEV_LABEL = { critical: "严重", high: "高危", medium: "中等", low: "低", info: "提示" };
 
     const $ = (id) => document.getElementById(id);
 
@@ -229,9 +310,9 @@
       }
       renderStats({ critical:0, high:0, medium:0, low:0, info:0 });
       const guide = await (await fetch("/api/checklist")).json();
-      $("view-guide").innerHTML = guide.sections.map(sec =>
-        `<div class="panel section" style="padding:16px 18px;margin-bottom:12px"><h3>${esc(sec.title)}</h3><ul>${sec.items.map(i => `<li>${esc(i)}</li>`).join("")}</ul></div>`
-      ).join("");
+      $("view-guide").innerHTML = `<div class="guide-grid">${guide.sections.map(sec =>
+        `<div class="panel section" style="padding:16px 18px"><h3>${esc(sec.title)}</h3><ul>${sec.items.map(i => `<li>${esc(i)}</li>`).join("")}</ul></div>`
+      ).join("")}</div>`;
       const rules = await (await fetch("/api/rules")).json();
       state.rules = rules.rules || [];
       renderRules();
@@ -241,8 +322,8 @@
     function renderRules(filter) {
       const q = (filter || "").toLowerCase();
       const rows = state.rules.filter(r => !q || (r.rule_id + r.title + (r.cwe || "")).toLowerCase().includes(q));
-      $("view-rules").innerHTML = `<input id="ruleq" type="text" placeholder="搜索规则 ID / 标题" value="${esc(filter || "")}"><div class="list"><table><thead><tr><th>ID</th><th>级别</th><th>规则</th></tr></thead><tbody>${
-        rows.map(r => `<tr><td><code>${esc(r.rule_id)}</code></td><td class="sev ${esc(r.severity)}">${esc(r.severity)}</td><td>${esc(r.title)}${r.cwe ? " · " + esc(r.cwe) : ""}</td></tr>`).join("")
+      $("view-rules").innerHTML = `<input id="ruleq" class="rules-bar" type="text" placeholder="搜索规则 ID / 标题" value="${esc(filter || "")}"><div class="list"><div class="list-head">共 ${rows.length} 条规则</div><table><thead><tr><th>ID</th><th>级别</th><th>规则</th></tr></thead><tbody>${
+        rows.map(r => `<tr><td><code>${esc(r.rule_id)}</code></td><td class="sev ${esc(r.severity)}">${esc(SEV_LABEL[r.severity] || r.severity)}</td><td>${esc(r.title)}${r.cwe ? " · " + esc(r.cwe) : ""}</td></tr>`).join("")
       }</tbody></table></div>`;
       const box = $("ruleq");
       if (box) box.oninput = (ev) => renderRules(ev.target.value);
@@ -250,7 +331,7 @@
 
     function renderStats(counts) {
       $("stats").innerHTML = ["critical","high","medium","low","info"].map(k =>
-        `<div class="stat ${k}"><b>${counts[k] || 0}</b><span>${k}</span></div>`
+        `<div class="stat ${k}"><b>${counts[k] || 0}</b><span>${SEV_LABEL[k]}</span></div>`
       ).join("");
     }
 
@@ -272,9 +353,9 @@
       }
       $("rows").innerHTML = items.map((item, idx) => `
         <tr data-idx="${idx}" class="${idx === state.selected ? "selected" : ""}">
-          <td class="sev ${esc(item.severity)}">${esc(item.severity)}</td>
-          <td>${esc(item.rule_id)}<br>${esc(item.title)}</td>
-          <td>${esc(item.path)}:${item.line}<br><code>${esc(item.snippet)}</code></td>
+          <td class="sev ${esc(item.severity)}">${esc(SEV_LABEL[item.severity] || item.severity)}</td>
+          <td><span class="rule-id">${esc(item.rule_id)}</span><br>${esc(item.title)}</td>
+          <td><span class="muted">${esc(item.path)}:${item.line}</span><br><code>${esc(item.snippet)}</code></td>
         </tr>`).join("");
       renderDetail(items[state.selected] || items[0]);
     }
@@ -285,18 +366,21 @@
         item.fixable ? '<span class="badge">可自动修复</span>' : "",
         item.baselined ? '<span class="badge">基线已接受</span>' : "",
         item.language ? `<span class="badge">${esc(item.language)}</span>` : "",
+        item.cwe ? `<span class="badge">${esc(item.cwe)}</span>` : "",
       ].join("");
       $("detail").innerHTML = `
-        <div class="sev ${esc(item.severity)}">${esc(item.severity)} · ${esc(item.category)}</div>
-        <h2>${esc(item.rule_id)} ${esc(item.title)}</h2>
-        <p>${extra}</p>
-        <p><code>${esc(item.path)}:${item.line}</code></p>
-        <p><code>${esc(item.snippet)}</code></p>
-        <p>${esc(item.message)}</p>
-        <p><strong>加固建议</strong><br>${esc(item.remediation)}</p>
-        ${item.cwe ? `<p>${esc(item.cwe)}</p>` : ""}
-        <p><button class="ghost" id="copy-fix">复制加固建议</button></p>
-        <div class="codebox" id="ctx">加载上下文…</div>
+        <div class="detail-head">问题详情</div>
+        <div class="detail-body">
+          <div class="sev ${esc(item.severity)}">${esc(SEV_LABEL[item.severity] || item.severity)} · ${esc(item.category)}</div>
+          <h2>${esc(item.rule_id)} ${esc(item.title)}</h2>
+          <p>${extra}</p>
+          <p><code>${esc(item.path)}:${item.line}</code></p>
+          <p><code>${esc(item.snippet)}</code></p>
+          <p>${esc(item.message)}</p>
+          <div class="fix-box"><strong>加固建议</strong>${esc(item.remediation)}</div>
+          <p><button class="ghost" id="copy-fix">复制加固建议</button></p>
+          <div class="codebox" id="ctx">加载上下文…</div>
+        </div>
       `;
       const copy = $("copy-fix");
       if (copy) copy.onclick = () => navigator.clipboard.writeText(item.remediation || "");
@@ -393,7 +477,7 @@
       });
       renderList();
       if (!state.findings.length) {
-        $("detail").innerHTML = "<h2>未发现规则命中</h2><p>这不代表没有缺陷，只说明当前规则没有匹配。</p>";
+        $("detail").innerHTML = `<div class="detail-head">问题详情</div><div class="detail-body"><h2>未发现规则命中</h2><p>这不代表没有缺陷，只说明当前规则没有匹配。</p></div>`;
       }
     }
 
@@ -430,7 +514,7 @@
         }
         applyScanResult(data);
       } catch (err) {
-        $("detail").innerHTML = `<h2>无法完成扫描</h2><p>${esc(err.message)}</p>`;
+        $("detail").innerHTML = `<div class="detail-head">问题详情</div><div class="detail-body"><h2>无法完成扫描</h2><p>${esc(err.message)}</p></div>`;
       } finally {
         $("run").disabled = false;
         $("run").textContent = "开始检查";
@@ -470,7 +554,7 @@
       try {
         await exportScan("md", "deepopen-fix-plan.md");
       } catch (err) {
-        $("detail").innerHTML = `<h2>无法导出修改方案</h2><p>${esc(err.message)}</p>`;
+        $("detail").innerHTML = `<div class="detail-head">问题详情</div><div class="detail-body"><h2>无法导出修改方案</h2><p>${esc(err.message)}</p></div>`;
       }
     };
 
@@ -478,7 +562,7 @@
       try {
         await exportScan("html", "deepopen-report.html");
       } catch (err) {
-        $("detail").innerHTML = `<h2>无法导出 HTML</h2><p>${esc(err.message)}</p>`;
+        $("detail").innerHTML = `<div class="detail-head">问题详情</div><div class="detail-body"><h2>无法导出 HTML</h2><p>${esc(err.message)}</p></div>`;
       }
     };
 
@@ -493,7 +577,7 @@
       try {
         await exportScan("json", "deepopen-report.json");
       } catch (err) {
-        $("detail").innerHTML = `<h2>无法导出 JSON</h2><p>${esc(err.message)}</p>`;
+        $("detail").innerHTML = `<div class="detail-head">问题详情</div><div class="detail-body"><h2>无法导出 JSON</h2><p>${esc(err.message)}</p></div>`;
       }
     };
 
@@ -505,7 +589,7 @@
       });
       const data = await res.json();
       const lines = (data.changes || []).map(c => `${c.path}:${c.line} ${c.rule_id}\n- ${c.before}\n+ ${c.after}`);
-      $("detail").innerHTML = `<h2>修复预览</h2><p>共 ${data.changes ? data.changes.length : 0} 处，仅质量问题。要用 CLI 写回：<code>python -m deepopen fix --apply</code></p><pre class="codebox">${esc(lines.join("\n\n") || "没有可自动修复的命中。")}</pre>`;
+      $("detail").innerHTML = `<div class="detail-head">问题详情</div><div class="detail-body"><h2>修复预览</h2><p>共 ${data.changes ? data.changes.length : 0} 处，仅质量问题。要用 CLI 写回：<code>python -m deepopen fix --apply</code></p><pre class="codebox">${esc(lines.join("\n\n") || "没有可自动修复的命中。")}</pre></div>`;
     };
 
     $("cat").onchange = (ev) => { state.cat = ev.target.value; state.selected = 0; renderList(); };

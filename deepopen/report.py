@@ -233,14 +233,15 @@ def render_html(result: ScanResult) -> str:
   <meta charset="utf-8">
   <title>DeepOpen 检查报告</title>
   <style>
-    :root {{ font-family: "Segoe UI", sans-serif; background: #0b1220; color: #e7ecf3; }}
-    body {{ margin: 0; padding: 32px; }}
-    h1 {{ margin: 0 0 8px; font-size: 28px; }}
-    .meta {{ color: #9aa7b8; margin-bottom: 24px; }}
-    .cards {{ display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }}
-    .card {{ background: #121b2b; border-radius: 12px; padding: 16px 20px; min-width: 110px; border: 1px solid #223049; }}
+    :root {{ font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: #0b1220; color: #e7ecf3; }}
+    body {{ margin: 0; padding: 28px 32px 48px; max-width: 1200px; }}
+    .hero {{ display: flex; gap: 16px; align-items: center; margin-bottom: 8px; }}
+    h1 {{ margin: 0; font-size: 26px; }}
+    .meta {{ color: #9aa7b8; margin: 0 0 22px; line-height: 1.5; }}
+    .cards {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 24px; }}
+    .card {{ background: #121b2b; border-radius: 12px; padding: 16px 20px; border: 1px solid #223049; }}
     .card .n {{ font-size: 28px; font-weight: 700; }}
-    .card .l {{ color: #9aa7b8; text-transform: uppercase; font-size: 12px; }}
+    .card .l {{ color: #9aa7b8; font-size: 12px; }}
     .critical .n {{ color: #e879f9; }}
     .high .n {{ color: #fb7185; }}
     .medium .n {{ color: #fbbf24; }}
@@ -254,7 +255,7 @@ def render_html(result: ScanResult) -> str:
   </style>
 </head>
 <body>
-  <h1>DeepOpen 代码检查报告</h1>
+  <div class="hero"><h1>DeepOpen 代码检查报告</h1></div>
   <p class="meta">DeepOpen {__version__} · 目录 {html.escape(str(result.root))} · 文件 {result.files_scanned} · 命中 {len(result.findings)} · {result.duration_ms}ms</p>
   <div class="cards">{cards}</div>
   {empty}
