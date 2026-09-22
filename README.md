@@ -8,9 +8,9 @@
 
 扫描**你自己的源码**，找出常见缺陷、密钥泄露和不安全写法，并给出加固建议。
 
-### ✨ 当前版本 0.5.0
+### ✨ 当前版本 0.6.0
 
-Python 3.10+ · 仅标准库 · 约 258 条规则
+Python 3.10+ · 仅标准库 · 约 305 条规则
 
 #### 🌟 项目亮点
 
@@ -23,9 +23,9 @@ Python 3.10+ · 仅标准库 · 约 258 条规则
 📋 **工程接入** — 基线、钩子、GitHub Actions、自定义规则
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Version](https://img.shields.io/badge/version-0.5.0-3ee0b2)](https://github.com/Ms-liyc/deepopen)
+[![Version](https://img.shields.io/badge/version-0.6.0-3ee0b2)](https://github.com/Ms-liyc/deepopen)
 [![Stdlib](https://img.shields.io/badge/deps-stdlib%20only-success)](https://github.com/Ms-liyc/deepopen)
-[![Rules](https://img.shields.io/badge/rules-258-orange)](https://github.com/Ms-liyc/deepopen)
+[![Rules](https://img.shields.io/badge/rules-305-orange)](https://github.com/Ms-liyc/deepopen)
 [![Stars](https://img.shields.io/github/stars/Ms-liyc/deepopen?style=flat)](https://github.com/Ms-liyc/deepopen/stargazers)
 [![Issues](https://img.shields.io/github/issues/Ms-liyc/deepopen)](https://github.com/Ms-liyc/deepopen/issues)
 

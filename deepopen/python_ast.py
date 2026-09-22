@@ -386,9 +386,163 @@ class _Visitor(ast.NodeVisitor):
                 "对外通信改用 HTTPSConnection，并保持证书校验。",
                 "CWE-319",
             )
+        self._check_extra_calls(node, name)
         self.generic_visit(node)
 
+    def _check_extra_calls(self, node: ast.Call, name: str) -> None:
+        leaf = name.rsplit(".", 1)[-1]
+        xml_full = {
+            "xml.etree.ElementTree.parse",
+            "xml.etree.ElementTree.fromstring",
+            "xml.etree.ElementTree.XML",
+            "xml.dom.minidom.parse",
+            "xml.dom.minidom.parseString",
+            "xml.sax.parse",
+            "lxml.etree.parse",
+            "lxml.etree.fromstring",
+        }
+        if name in xml_full or (
+            leaf in {"fromstring", "XML", "parseString"}
+            and (
+                name.startswith("ET.")
+                or any(part in name.lower() for part in ("xml", "etree", "minidom", "element"))
+            )
+        ) or (
+            leaf == "parse" and any(part in name.lower() for part in ("xml", "etree", "minidom", "sax"))
+        ):
+            self._add(
+                node, "AST070", "标准库 XML 解析", Severity.MEDIUM, Category.SECURITY,
+                "默认 XML 解析器可能展开外部实体。",
+                "改用 defusedxml，或显式关闭外部实体与 DTD。",
+                "CWE-611",
+            )
+        if leaf == "redirect" and node.args and _touches_request(node.args[0]):
+            self._add(
+                node, "AST071", "跳转目标来自请求", Severity.HIGH, Category.SECURITY,
+                "把请求里的地址直接交给 redirect，浏览器可能被带到其它站点。",
+                "只允许站内相对路径，或对照固定的域名白名单。",
+                "CWE-601",
+            )
+        if name in {"shutil.rmtree", "os.remove", "os.unlink", "os.rmdir"} and node.args and _is_dynamic_string(node.args[0]):
+            self._add(
+                node, "AST072", "删除路径由字符串拼接得到", Severity.HIGH, Category.SECURITY,
+                "删除目标是拼接出来的，可能删到预期目录之外。",
+                "先规范化到固定根目录，并拒绝 .. 与绝对路径。",
+                "CWE-22",
+            )
+        if leaf == "Unpickler" or name.endswith(".Unpickler"):
+            self._add(
+                node, "AST073", "pickle.Unpickler", Severity.HIGH, Category.SECURITY,
+                "Unpickler 会按字节流构造对象。",
+                "对外数据使用 JSON；不要还原不可信流。",
+                "CWE-502",
+            )
+        if name in {"importlib.import_module", "import_module"} and node.args and not isinstance(node.args[0], ast.Constant):
+            self._add(
+                node, "AST074", "按变量动态导入模块", Severity.HIGH, Category.SECURITY,
+                "模块名不是常量时，外部数据可能决定要加载哪段代码。",
+                "只用固定的模块名白名单。",
+                "CWE-95",
+            )
+        if name in {"random.seed", "random.Random"} and node.args and isinstance(node.args[0], ast.Constant):
+            self._add(
+                node, "AST075", "用常量给随机数播种", Severity.MEDIUM, Category.SECURITY,
+                "固定种子会让后续随机序列可预测。",
+                "安全场景改用 secrets；不要用常量 seed。",
+                "CWE-330",
+            )
+        if name == "subprocess.Popen" and not any(kw.arg == "timeout" for kw in node.keywords):
+            self._add(
+                node, "AST076", "Popen 未约束等待时间", Severity.MEDIUM, Category.BUG,
+                "Popen 构造时不带超时，wait/communicate 若也不设超时就会一直卡住。",
+                "调用 wait 或 communicate 时传入 timeout。",
+                "CWE-400",
+            )
+        if name in {
+            "pandas.read_pickle", "joblib.load", "cloudpickle.load", "cloudpickle.loads",
+            "dill.Unpickler",
+        } or (name in {"numpy.load", "np.load"} and any(
+            kw.arg == "allow_pickle" and _is_true(kw.value) for kw in node.keywords
+        )):
+            self._add(
+                node, "AST078", "从 pickle 类格式读取数据", Severity.HIGH, Category.SECURITY,
+                f"{name} 会还原可执行对象。",
+                "只读取可信文件；对外数据不要开 allow_pickle。",
+                "CWE-502",
+            )
+        if leaf in {"SMTP", "POP3", "IMAP4", "NNTP"} and "SSL" not in name and "TLS" not in leaf:
+            self._add(
+                node, "AST079", "明文邮件/新闻协议", Severity.MEDIUM, Category.SECURITY,
+                f"{name} 默认不加密。",
+                "改用 SMTP_SSL、IMAP4_SSL、POP3_SSL，或先 STARTTLS。",
+                "CWE-319",
+            )
+        if leaf == "AutoAddPolicy" or (
+            leaf == "set_missing_host_key_policy" and any("AutoAddPolicy" in ast.dump(arg) for arg in node.args)
+        ):
+            self._add(
+                node, "AST080", "SSH 自动信任未知主机密钥", Severity.HIGH, Category.SECURITY,
+                "AutoAddPolicy 会接受任意主机密钥。",
+                "使用已知主机文件，或对指纹做固定校验。",
+                "CWE-295",
+            )
+        if name.endswith("disable_warnings") and "urllib3" in name:
+            self._add(
+                node, "AST081", "关闭 urllib3 的安全警告", Severity.MEDIUM, Category.SECURITY,
+                "关掉警告后，证书错误更容易被忽略。",
+                "修掉证书问题，不要屏蔽 InsecureRequestWarning。",
+                "CWE-295",
+            )
+        if leaf == "pbkdf2_hmac":
+            rounds = None
+            if len(node.args) >= 4 and isinstance(node.args[3], ast.Constant) and isinstance(node.args[3].value, int):
+                rounds = node.args[3].value
+            for kw in node.keywords:
+                if kw.arg == "iterations" and isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, int):
+                    rounds = kw.value.value
+            if rounds is not None and rounds < 100_000:
+                self._add(
+                    node, "AST082", "PBKDF2 迭代次数过低", Severity.MEDIUM, Category.SECURITY,
+                    f"迭代次数 {rounds} 对口令派生偏少。",
+                    "至少使用 600000 次，或改用 Argon2/bcrypt。",
+                    "CWE-916",
+                )
+        if leaf == "Environment" and any(kw.arg == "autoescape" and _is_false(kw.value) for kw in node.keywords):
+            self._add(
+                node, "AST083", "模板关闭自动转义", Severity.HIGH, Category.SECURITY,
+                "关闭自动转义会把变量原样写入 HTML。",
+                "保持自动转义；只有明确消毒过的片段才标记为安全。",
+                "CWE-79",
+            )
+
+    def _check_tls_assign(self, node: ast.Assign) -> None:
+        for target in node.targets:
+            if not isinstance(target, ast.Attribute):
+                continue
+            if target.attr == "check_hostname" and _is_false(node.value):
+                self._add(
+                    node, "AST077", "关闭 TLS 主机名校验", Severity.HIGH, Category.SECURITY,
+                    "check_hostname = False 会接受证书上不匹配的主机名。",
+                    "保持主机名校验；自签证书时指定正确的 CA。",
+                    "CWE-295",
+                )
+            if target.attr == "verify_mode" and _is_cert_none(node.value):
+                self._add(
+                    node, "AST077", "SSL 上下文不校验证书", Severity.HIGH, Category.SECURITY,
+                    "verify_mode 被设成不校验。",
+                    "使用 CERT_REQUIRED，并加载信任的 CA。",
+                    "CWE-295",
+                )
+            if target.attr == "verify" and _is_false(node.value):
+                self._add(
+                    node, "AST015", "关闭 TLS 证书校验", Severity.HIGH, Category.SECURITY,
+                    "把 verify 设成了 False。",
+                    "保持校验；自签证书时指定 CA 包路径。",
+                    "CWE-295",
+                )
+
     def visit_Assign(self, node: ast.Assign) -> None:
+        self._check_tls_assign(node)
         names = [t.id for t in node.targets if isinstance(t, ast.Name)]
         secret_names = {"SECRET_KEY", "SECRET", "AWS_SECRET_ACCESS_KEY", "PRIVATE_KEY"}
         if any(item in secret_names for item in names):
@@ -835,6 +989,23 @@ def _is_literal_identity(node: ast.AST) -> bool:
 
 def _has_loader(node: ast.Call) -> bool:
     return any(kw.arg in {"Loader", "loader"} for kw in node.keywords)
+
+
+def _touches_request(node: ast.AST) -> bool:
+    for child in ast.walk(node):
+        if isinstance(child, ast.Name) and child.id in {"request", "req"}:
+            return True
+        if isinstance(child, ast.Attribute) and child.attr in {
+            "GET", "POST", "args", "form", "values", "query", "query_params", "data", "json", "params",
+        }:
+            return True
+    return False
+
+
+def _is_cert_none(node: ast.AST) -> bool:
+    if isinstance(node, ast.Name) and node.id == "CERT_NONE":
+        return True
+    return isinstance(node, ast.Attribute) and node.attr == "CERT_NONE"
 
 
 def _is_dynamic_string(node: ast.AST) -> bool:

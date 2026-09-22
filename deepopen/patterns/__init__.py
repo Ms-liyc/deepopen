@@ -14,6 +14,7 @@ from deepopen.patterns.other_langs import CSHARP_RULES, PHP_RULES, RUBY_RULES
 from deepopen.patterns.python_code import PYTHON_RULES
 from deepopen.patterns.secrets import SECRET_RULES
 from deepopen.patterns.auth import AUTH_RULES
+from deepopen.patterns.more import MORE_RULES
 from deepopen.patterns.web import WEB_RULES
 
 ALL_PATTERN_RULES: tuple[PatternRule, ...] = (
@@ -34,6 +35,7 @@ ALL_PATTERN_RULES: tuple[PatternRule, ...] = (
     + KOTLIN_RULES
     + BUG_RULES
     + AUTH_RULES
+    + MORE_RULES
 )
 
 RULE_BY_ID = {rule.rule_id: rule for rule in ALL_PATTERN_RULES}

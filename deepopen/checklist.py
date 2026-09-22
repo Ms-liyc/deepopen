@@ -103,6 +103,8 @@ DeepOpen 开发加固清单（防守向）
    - 按对象 ID 查询时带上当前用户或租户条件。
    - 生产配置不要关 TLS、不要把口令写进 yaml/properties。
    - 锁定依赖；可用 --advisories 查 OSV，但仍应定期跑 pip-audit / npm audit。
+   - XML 用 defusedxml；跳转目标不要直接来自请求。
+   - 口令派生不要用过低的 PBKDF2 次数；邮件协议用 TLS。
 
 本工具能发现源码里能看出来的模式、测试缺口和可选的公开依赖公告，不能代替代码评审、完整测试和持续 CVE 扫描。
 """.strip()
